@@ -32,14 +32,31 @@ struct Color {
     union {
         u32 value;
         struct {
-            u8 a, b, g, r; // I think endianness matters here
+            u8 a, b, g, r; // I think endianness matters here. This is little-endian
         };
     };
 };
 
 static inline void
-setPixel(u32* array, u32 x, u32 y, u32 value) {
-    array[y * WIDTH + x] = value;
+setPixel(u32* pixels, u32 x, u32 y, u32 value) {
+    pixels[y * WIDTH + x] = value;
+}
+
+static void
+renderPixels(u32* pixels, u32 width, u32 height) {
+    memset(pixels, 0, sizeof(u32) * width * height);
+
+    for(u32 x = 0; x < width; x++) {
+        for(u32 y = 0; y < height; y++) {
+            Color white = {};
+            white.value = 0xffffffff;
+            Color test = {};
+            test.g = 255;
+            test.a = 255;
+            if(y%100 == 0) setPixel(pixels, x, y, white.value);
+            if(y%200 == 0) setPixel(pixels, x, y, test.value);
+        }
+    }
 }
 
 int
@@ -102,20 +119,7 @@ main(int argc, char** argv) {
             }
         }
 
-
-        memset(pixels, 0, sizeof(u32) * WIDTH * HEIGHT);
-
-        for(u32 x = 0; x < WIDTH; x++) {
-            for(u32 y = 0; y < HEIGHT; y++) {
-                Color white = {};
-                white.value = 0xffffffff;
-                Color test = {};
-                test.g = 255;
-                test.a = 255;
-                if(y%100 == 0) setPixel(pixels, x, y, white.value);
-                if(y%200 == 0) setPixel(pixels, x, y, test.value);
-            }
-        }
+        renderPixels(pixels, WIDTH, HEIGHT);
 
         SDL_UpdateTexture(texture, NULL, pixels, WIDTH * sizeof(u32));
 
