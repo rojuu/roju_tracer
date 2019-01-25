@@ -46,15 +46,19 @@ static void
 renderPixels(u32* pixels, u32 width, u32 height) {
     memset(pixels, 0, sizeof(u32) * width * height);
 
+    hmm_vec2 center = HMM_Vec2((f32)WIDTH/2.f, (f32)HEIGHT/2.f);
     for(u32 x = 0; x < width; x++) {
         for(u32 y = 0; y < height; y++) {
             Color white = {};
             white.value = 0xffffffff;
-            Color test = {};
-            test.g = 255;
-            test.a = 255;
-            if(y%100 == 0) setPixel(pixels, x, y, white.value);
-            if(y%200 == 0) setPixel(pixels, x, y, test.value);
+            Color green = {};
+            green.g = 255;
+            green.a = 255;
+            f32 radius = (f32)HEIGHT * 0.33f;
+            hmm_vec2 point = HMM_Vec2(x, y);
+            if(HMM_Length(center - point) < radius) {
+                setPixel(pixels, x, y, green.value);
+            }
         }
     }
 }
