@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <SDL2/SDL.h>
 
+#define HANDMADE_MATH_IMPLEMENTATION
+#include "HandmadeMath.h"
+
 #include <assert.h>
 
 #include <stdint.h>
@@ -22,7 +25,25 @@ typedef i16 b16;
 typedef i32 b32;
 typedef i64 b64;
 
-int main(int argc, char** argv) {
+const int WIDTH  = 640;
+const int HEIGHT = 480;
+
+struct Color {
+    union {
+        u32 value;
+        struct {
+            u8 a, b, g, r; // I think endianness matters here
+        };
+    };
+};
+
+static inline void
+setPixel(u32* array, u32 x, u32 y, u32 value) {
+    array[y * WIDTH + x] = value;
+}
+
+int
+main(int argc, char** argv) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         const char* error = SDL_GetError();
         assert("SDL_Error" == error);
@@ -30,33 +51,36 @@ int main(int argc, char** argv) {
     }
     atexit(SDL_Quit);
 
-    SDL_Window *window = SDL_CreateWindow(
+    SDL_Window* window = SDL_CreateWindow(
         "roju_tracer",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
-        640, 480,
+        WIDTH, HEIGHT,
         0);
 
-    if (!window) {
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+
+    SDL_Texture* texture = SDL_CreateTexture(renderer,
+        SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STATIC, WIDTH, HEIGHT);
+
+    if (!window || !renderer || !texture) {
         const char* error = SDL_GetError();
         assert("SDL_Error" == error);
         return -1;
     }
 
+    u32* pixels = (u32*)malloc(sizeof(u32) * WIDTH * HEIGHT);
+
     b32 running = true;
-    f64 current_time = (f32)SDL_GetPerformanceCounter() /
-                       (f32)SDL_GetPerformanceFrequency();
-    f64 last_time = 0;
-    f64 delta_time = 0;
-    i32 frame_counter = 0;
-    i32 last_frame_count = 0;
-    f64 last_fps_time = 0;
-    f64 last_update_time = 0;
-    while (running) {
-        last_time = current_time;
-        current_time = (f64)SDL_GetPerformanceCounter() /
+    f64 currentTime = (f64)SDL_GetPerformanceCounter() /
                        (f64)SDL_GetPerformanceFrequency();
-        delta_time = (f64)(current_time - last_time);
+    f64 lastTime = 0;
+    f64 deltaTime = 0;
+    while (running) {
+        lastTime = currentTime;
+        currentTime =  (f64)SDL_GetPerformanceCounter() /
+                       (f64)SDL_GetPerformanceFrequency();
+        deltaTime = (f64)(currentTime - lastTime);
 
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -77,6 +101,28 @@ int main(int argc, char** argv) {
                 }
             }
         }
+
+
+        memset(pixels, 0, sizeof(u32) * WIDTH * HEIGHT);
+
+        for(u32 x = 0; x < WIDTH; x++) {
+            for(u32 y = 0; y < HEIGHT; y++) {
+                Color white = {};
+                white.value = 0xffffffff;
+                Color test = {};
+                test.g = 255;
+                test.a = 255;
+                if(y%100 == 0) setPixel(pixels, x, y, white.value);
+                if(y%200 == 0) setPixel(pixels, x, y, test.value);
+            }
+        }
+
+        SDL_UpdateTexture(texture, NULL, pixels, WIDTH * sizeof(u32));
+
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, texture, NULL, NULL);
+        SDL_RenderPresent(renderer);
     }
 
     SDL_DestroyWindow(window);
