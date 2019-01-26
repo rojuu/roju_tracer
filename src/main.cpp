@@ -38,12 +38,12 @@ struct Color {
 };
 
 static inline void
-setPixel(u32* pixels, u32 x, u32 y, u32 value) {
-    pixels[y * WIDTH + x] = value;
+setPixelColor(Color* pixels, u32 x, u32 y, Color color) {
+    pixels[y * WIDTH + x] = color;
 }
 
 static void
-renderPixels(u32* pixels, u32 width, u32 height) {
+renderPixels(Color* pixels, u32 width, u32 height) {
     memset(pixels, 0, sizeof(u32) * width * height);
 
     hmm_vec2 center = HMM_Vec2((f32)WIDTH/2.f, (f32)HEIGHT/2.f);
@@ -57,7 +57,7 @@ renderPixels(u32* pixels, u32 width, u32 height) {
             f32 radius = (f32)HEIGHT * 0.33f;
             hmm_vec2 point = HMM_Vec2(x, y);
             if(HMM_Length(center - point) < radius) {
-                setPixel(pixels, x, y, green.value);
+                setPixelColor(pixels, x, y, green);
             }
         }
     }
@@ -90,7 +90,7 @@ main(int argc, char** argv) {
         return -1;
     }
 
-    u32* pixels = (u32*)malloc(sizeof(u32) * WIDTH * HEIGHT);
+    Color* pixels = (Color*)malloc(sizeof(Color) * WIDTH * HEIGHT);
 
     b32 running = true;
     f64 currentTime = (f64)SDL_GetPerformanceCounter() /
@@ -125,7 +125,7 @@ main(int argc, char** argv) {
 
         renderPixels(pixels, WIDTH, HEIGHT);
 
-        SDL_UpdateTexture(texture, NULL, pixels, WIDTH * sizeof(u32));
+        SDL_UpdateTexture(texture, NULL, pixels, WIDTH * sizeof(Color));
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
