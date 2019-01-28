@@ -32,29 +32,36 @@ struct Color {
     union {
         u32 value;
         struct {
-            u8 a, b, g, r; // I think endianness matters here. This is little-endian
+            u8 a, b, g, r;
         };
     };
 };
 
+static inline Color
+color(u8 r, u8 g, u8 b, u8 a = 255) {
+    Color result;
+    result.r = r;
+    result.g = g;
+    result.b = b;
+    result.a = a;
+    return result;
+}
+
 static inline void
-setPixelColor(Color* pixels, u32 x, u32 y, Color color) {
+setPixelColor(Color* pixels, i32 x, i32 y, Color color) {
     pixels[y * WIDTH + x] = color;
 }
 
 static void
-renderPixels(Color* pixels, u32 width, u32 height) {
-    memset(pixels, 0, sizeof(u32) * width * height);
+renderPixels(Color* pixels) {
+    memset(pixels, 0, sizeof(Color) * WIDTH * HEIGHT);
 
     hmm_vec2 center = HMM_Vec2((f32)WIDTH/2.f, (f32)HEIGHT/2.f);
-    for(u32 x = 0; x < width; x++) {
-        for(u32 y = 0; y < height; y++) {
-            Color white = {};
-            white.value = 0xffffffff;
-            Color green = {};
-            green.g = 255;
-            green.a = 255;
-            f32 radius = (f32)HEIGHT * 0.33f;
+    for(i32 x = 0; x < WIDTH; x++) {
+        for(i32 y = 0; y < HEIGHT; y++) {
+            Color white = color(255, 255, 255);
+            Color green = color(0, 255, 0);
+            f32 radius = (f32)HEIGHT/2 * 0.33f;
             hmm_vec2 point = HMM_Vec2(x, y);
             if(HMM_Length(center - point) < radius) {
                 setPixelColor(pixels, x, y, green);
@@ -72,8 +79,9 @@ main(int argc, char** argv) {
     }
     atexit(SDL_Quit);
 
+    char* windowTitle = (char*)"roju_tracer";
     SDL_Window* window = SDL_CreateWindow(
-        "roju_tracer",
+        windowTitle,
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         WIDTH, HEIGHT,
@@ -117,20 +125,26 @@ main(int argc, char** argv) {
                             running = false;
                             break;
                         }
+
+                        // Do the rendering thing
+                        case SDLK_RETURN: {
+                            SDL_SetWindowTitle(window, "Rendering");
+                            renderPixels(pixels);
+
+                            SDL_UpdateTexture(texture, NULL, pixels, WIDTH * sizeof(Color));
+
+                            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                            SDL_RenderClear(renderer);
+                            SDL_RenderCopy(renderer, texture, NULL, NULL);
+                            SDL_RenderPresent(renderer);
+
+                            SDL_SetWindowTitle(window, windowTitle);
+                        }
                     }
                     break;
                 }
             }
         }
-
-        renderPixels(pixels, WIDTH, HEIGHT);
-
-        SDL_UpdateTexture(texture, NULL, pixels, WIDTH * sizeof(Color));
-
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, texture, NULL, NULL);
-        SDL_RenderPresent(renderer);
     }
 
     SDL_DestroyWindow(window);
