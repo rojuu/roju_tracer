@@ -28,6 +28,12 @@ typedef i64 b64;
 const int WIDTH  = 640;
 const int HEIGHT = 480;
 
+template<typename T>
+static inline T*
+allocate(size_t count) {
+    return (T*)calloc(count, sizeof(T));
+}
+
 struct Color {
     union {
         u32 value;
@@ -52,14 +58,134 @@ setPixelColor(Color* pixels, i32 x, i32 y, Color color) {
     pixels[y * WIDTH + x] = color;
 }
 
+struct Ray {
+    hmm_vec3 origin;
+    hmm_vec3 direction;
+};
+
+struct Material {
+    Color color;
+};
+
+//TODO: Object types might be a good candidate for code generation
+enum ObjectType {
+    OT_NONE,
+    OT_SPHERE,
+    OT_PLANE,
+    OT_DISK,
+    OT_AABB_BOX,
+};
+struct Object {
+    Object() { type = OT_NONE; }
+    ObjectType type;
+    Material* material;
+};
+struct Sphere : Object {
+    Sphere() { type = OT_SPHERE; }
+    hmm_vec3 position;
+    f32 radius;
+};
+struct Plane : Object {
+    Plane() { type = OT_PLANE; }
+    hmm_vec3 p;
+    hmm_vec3 n;
+};
+struct Disk : Object {
+    Disk() { type = OT_DISK; }
+    hmm_vec3 position;
+    hmm_vec3 normal;
+    f32 radius;
+};
+struct AABBBox : Object {
+    AABBBox() { type = OT_AABB_BOX; }
+    hmm_vec3 position;
+    hmm_vec3 bounds; // Box width == x * 2;
+};
+
+#if 0
+static Color
+trace(const Ray& ray, int depth, const std::vector<Object*>& objects) {
+    Object *object = NULL;
+    float minDist = INFINITY;
+    Point pHit;
+    Normal nHit;
+    for (int k = 0; k < objects.size(); ++k) {
+        if (Intersect(objects[k], ray, &pHit, &nHit)) {
+            // ray origin = eye position of it's the prim ray
+            float distance = Distance(ray.origin, pHit);
+            if (distance < minDistance) {
+                object = objects[i];
+                minDistance = distance;
+            }
+        }
+    }
+    if (object == NULL)
+        return 0;
+    // if the object material is glass, split the ray into a reflection
+    // and a refraction ray.
+    if (object->isGlass && depth < MAX_RAY_DEPTH) {
+        // compute reflection
+        Ray reflectionRay;
+        reflectionRay = computeReflectionRay(ray.direction, nHit);
+        // recurse
+        color reflectionColor = Trace(reflectionRay, depth + 1);
+        Ray refractioRay;
+        refractionRay = computeRefractionRay(
+            object->indexOfRefraction,
+            ray.direction,
+            nHit);
+        // recurse
+        color refractionColor = Trace(refractionRay, depth + 1);
+        float Kr, Kt;
+        fresnel(
+            object->indexOfRefraction,
+            nHit,
+            ray.direction,
+            &Kr,
+            &Kt);
+        return reflectionColor * Kr + refractionColor * (1-Kr);
+    }
+    // object is a diffuse opaque object
+    // compute illumination
+    Ray shadowRay;
+    shadowRay.direction = lightPosition - pHit;
+    bool isShadow = false;
+    for (int k = 0; k < objects.size(); ++k) {
+        if (Intersect(objects[k], shadowRay)) {
+            // hit point is in shadow so just return
+            return 0;
+        }
+    }
+    // point is illuminated
+    return object->color * light.brightness;
+}
+#endif
+
 static void
 renderPixels(Color* pixels) {
     memset(pixels, 0, sizeof(Color) * WIDTH * HEIGHT);
 
+    const i32 sphereCount = 1;
+    Object** objects = allocate<Object*>(sphereCount);
+
+    #define ALLOC_OBJECT_ARRAY(typename, varname, count) \
+        typename* varname = allocate<typename>(count); \
+        for(i32 i = 0; i < count; i++){ \
+            varname[i] = typename(); \
+            objects[i] = &(varname[i]); \
+        }
+    ALLOC_OBJECT_ARRAY(Sphere, spheres, sphereCount)
+    #undef ALLOC_OBJECT_ARRAY
+
+    for(i32 i = 0; i < sphereCount; i++){
+        Sphere* sphere = &(spheres[i]);
+        hmm_vec3 pos = HMM_Vec3(0,0,0);
+        sphere->position = pos;
+    }
+
     hmm_vec2 center = HMM_Vec2((f32)WIDTH/2.f, (f32)HEIGHT/2.f);
-    for(i32 x = 0; x < WIDTH; x++) {
-        for(i32 y = 0; y < HEIGHT; y++) {
-            Color white = color(255, 255, 255);
+    for(i32 y = 0; y < HEIGHT; y++) {
+        for(i32 x = 0; x < WIDTH; x++) {
             Color green = color(0, 255, 0);
             f32 radius = (f32)HEIGHT/2 * 0.33f;
             hmm_vec2 point = HMM_Vec2(x, y);
@@ -98,7 +224,7 @@ main(int argc, char** argv) {
         return -1;
     }
 
-    Color* pixels = (Color*)malloc(sizeof(Color) * WIDTH * HEIGHT);
+    Color* pixels = allocate<Color>(WIDTH * HEIGHT);
 
     b32 running = true;
     f64 currentTime = (f64)SDL_GetPerformanceCounter() /
