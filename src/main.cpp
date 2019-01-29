@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <SDL2/SDL.h>
 
+#include <functional>
+
 #define HANDMADE_MATH_IMPLEMENTATION
 #include "HandmadeMath.h"
 
@@ -33,6 +35,19 @@ static inline T*
 allocate(size_t count) {
     return (T*)calloc(count, sizeof(T));
 }
+
+class DeferredTask {
+    std::function<void()> func_;
+public:
+    DeferredTask(std::function<void()> func) :
+    func_(func) {
+    }
+    ~DeferredTask() {
+        func_();
+    }
+    DeferredTask& operator=(const DeferredTask&) = delete;
+    DeferredTask(const DeferredTask&) = delete;
+};
 
 struct Color {
     union {
@@ -173,7 +188,8 @@ renderPixels(Color* pixels) {
         for(i32 i = 0; i < count; i++){ \
             varname[i] = typename(); \
             objects[i] = &(varname[i]); \
-        }
+        } \
+        typename ## _deferred = DeferredTask([](){ free(varname) });
     ALLOC_OBJECT_ARRAY(Sphere, spheres, sphereCount)
     #undef ALLOC_OBJECT_ARRAY
 
@@ -194,6 +210,8 @@ renderPixels(Color* pixels) {
             }
         }
     }
+
+    free(objects);
 }
 
 int
