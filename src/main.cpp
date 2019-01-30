@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <SDL2/SDL.h>
 
-#include <functional>
-
 #define HANDMADE_MATH_IMPLEMENTATION
 #include "HandmadeMath.h"
 
@@ -253,7 +251,6 @@ renderPixels(Color* pixels) {
     }
 }
 
-#include <iostream>
 int
 main(int argc, char** argv) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -282,6 +279,10 @@ main(int argc, char** argv) {
         assert("SDL_Error" == error);
         return -1;
     }
+
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    SDL_RenderPresent(renderer);
 
     Color* pixels = allocate<Color>(WIDTH * HEIGHT);
 
@@ -331,4 +332,6 @@ main(int argc, char** argv) {
             }
         }
     }
+
+    return 0;
 }
