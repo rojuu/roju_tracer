@@ -38,10 +38,10 @@ template <typename F>
 ScopeExit<F> MakeScopeExit(F f) {
     return ScopeExit<F>(f);
 };
-#define DO_STRING_JOIN2(arg1, arg2) arg1 ## arg2
-#define STRING_JOIN2(arg1, arg2) DO_STRING_JOIN2(arg1, arg2)
+#define CONCAT_IMPL(arg1, arg2) arg1 ## arg2
+#define CONCAT(arg1, arg2) CONCAT_IMPL(arg1, arg2)
 #define atScopeExit(code) \
-    auto STRING_JOIN2(scope_exit_, __LINE__) = MakeScopeExit([=](){code;})
+    auto CONCAT(scope_exit_, __LINE__) = MakeScopeExit([=](){code;})
 
 template<typename T>
 static inline T*
@@ -62,7 +62,7 @@ struct Color {
 };
 
 static inline Color
-color(u8 r, u8 g, u8 b, u8 a = 255) {
+makeColor(u8 r, u8 g, u8 b, u8 a = 255) {
     Color result;
     result.r = r;
     result.g = g;
@@ -81,8 +81,15 @@ struct Ray {
     hmm_vec3 direction;
 };
 
+struct Light {
+    hmm_vec3 position;
+    hmm_vec3 color;
+};
+
 struct Material {
-    Color color;
+    hmm_vec3 color;
+    b32 isGlass;
+    i32 refractionIndex;
 };
 
 //TODO: Object types might be a good candidate for code generation
@@ -120,17 +127,35 @@ struct AABBBox : Object {
     hmm_vec3 bounds; // Box width == x * 2;
 };
 
-#if 0
-static Color
-trace(const Ray& ray, int depth, const std::vector<Object*>& objects) {
+static Ray
+computeReflectionRay(hmm_vec3 rayDirection, hmm_vec3 hitNormal) {
+    return {};
+}
+
+static Ray
+computeRefractionRay(i32 refractionIndex, hmm_vec3 rayDirection, hmm_vec3 hitNormal) {
+    return {};
+}
+
+static void
+fresnel(i32 refractionIndex, hmm_vec3 hitNormal, hmm_vec3 rayDirection, f32* out_Kr, f32* out_Kt) {
+}
+
+static b32
+intersect(Object* object, Ray ray, hmm_vec3* out_pHit, hmm_vec3* out_nHit) {
+    return false;
+}
+
+static hmm_vec3 //color
+trace(Ray ray, int depth, int maxRayDepth, Light light, Object** objects, i32 objectCount) {
     Object *object = NULL;
-    float minDist = INFINITY;
-    Point pHit;
-    Normal nHit;
-    for (int k = 0; k < objects.size(); ++k) {
-        if (Intersect(objects[k], ray, &pHit, &nHit)) {
-            // ray origin = eye position of it's the prim ray
-            float distance = Distance(ray.origin, pHit);
+    f32 minDistance = INFINITY;
+    hmm_vec3 pHit;
+    hmm_vec3 nHit;
+    for (int i = 0; i < objectCount; ++i) {
+        object = objects[i];
+        if (intersect(objects[i], ray, &pHit, &nHit)) {
+            f32 distance = HMM_ABS(HMM_Length(pHit - ray.origin));
             if (distance < minDistance) {
                 object = objects[i];
                 minDistance = distance;
@@ -138,25 +163,24 @@ trace(const Ray& ray, int depth, const std::vector<Object*>& objects) {
         }
     }
     if (object == NULL)
-        return 0;
+        return HMM_Vec3(0,0,0);
     // if the object material is glass, split the ray into a reflection
     // and a refraction ray.
-    if (object->isGlass && depth < MAX_RAY_DEPTH) {
+    if (object->material->isGlass && depth < maxRayDepth) {
         // compute reflection
-        Ray reflectionRay;
-        reflectionRay = computeReflectionRay(ray.direction, nHit);
+        Ray reflectionRay = computeReflectionRay(ray.direction, nHit);
         // recurse
-        color reflectionColor = Trace(reflectionRay, depth + 1);
-        Ray refractioRay;
-        refractionRay = computeRefractionRay(
-            object->indexOfRefraction,
+        hmm_vec3 reflectionColor = trace(reflectionRay, depth+1, maxRayDepth, light, objects, objectCount);
+
+        Ray refractionRay = computeRefractionRay(
+            object->material->refractionIndex,
             ray.direction,
             nHit);
-        // recurse
-        color refractionColor = Trace(refractionRay, depth + 1);
+        hmm_vec3 refractionColor = trace(refractionRay, depth+1, maxRayDepth, light, objects, objectCount);
+
         float Kr, Kt;
         fresnel(
-            object->indexOfRefraction,
+            object->material->refractionIndex,
             nHit,
             ray.direction,
             &Kr,
@@ -166,25 +190,27 @@ trace(const Ray& ray, int depth, const std::vector<Object*>& objects) {
     // object is a diffuse opaque object
     // compute illumination
     Ray shadowRay;
-    shadowRay.direction = lightPosition - pHit;
+    shadowRay.direction = light.position - pHit;
     bool isShadow = false;
-    for (int k = 0; k < objects.size(); ++k) {
-        if (Intersect(objects[k], shadowRay)) {
+    for (int i = 0; i < objectCount; ++i) {
+        if (intersect(objects[i], shadowRay, 0, 0)) {
             // hit point is in shadow so just return
-            return 0;
+            return HMM_Vec3(0,0,0);
         }
     }
     // point is illuminated
-    return object->color * light.brightness;
+    return object->material->color * light.color;
 }
-#endif
 
+//TODO: Memory pool instead of calling allocate up front, probably should define the memory outside of this function anyway
 static void
 renderPixels(Color* pixels) {
     memset(pixels, 0, sizeof(Color) * WIDTH * HEIGHT);
 
     const i32 sphereCount = 1;
-    Object** objects = allocate<Object*>(sphereCount);
+    const i32 planeCount = 1;
+    const i32 objectCount = sphereCount + planeCount;
+    Object** objects = allocate<Object*>(objectCount);
     atScopeExit(free(objects));
 
     #define ALLOC_OBJECT_ARRAY(typename, varname, count) \
@@ -194,19 +220,30 @@ renderPixels(Color* pixels) {
             objects[i] = &(varname[i]); \
         } \
         atScopeExit(free(varname));
-    ALLOC_OBJECT_ARRAY(Sphere, spheres, sphereCount)
+    ALLOC_OBJECT_ARRAY(Sphere, spheres, sphereCount);
+    ALLOC_OBJECT_ARRAY(Plane, planes, planeCount);
     #undef ALLOC_OBJECT_ARRAY
 
-    for(i32 i = 0; i < sphereCount; i++){
-        Sphere* sphere = &(spheres[i]);
-        hmm_vec3 pos = HMM_Vec3(0,0,0);
-        sphere->position = pos;
-    }
+    Material sphereMaterial;
+    sphereMaterial.color = HMM_Vec3(0, 1, 0);
+
+    Material planeMaterial;
+    planeMaterial.color = HMM_Vec3(0.5f, 0.5f, 0.5f);
+
+    Sphere* sphere = &(spheres[0]);
+    sphere->material = &sphereMaterial;
+    sphere->position = HMM_Vec3(0,0,0);
+    sphere->radius = 1;
+
+    Plane* plane = &(planes[0]);
+    plane->material = &planeMaterial;
+    plane->p = HMM_Vec3(0, -10, 0);
+    plane->n = HMM_Vec3(0, 1, 0);
 
     hmm_vec2 center = HMM_Vec2((f32)WIDTH/2.f, (f32)HEIGHT/2.f);
     for(i32 y = 0; y < HEIGHT; y++) {
         for(i32 x = 0; x < WIDTH; x++) {
-            Color green = color(0, 255, 0);
+            Color green = makeColor(0, 255, 0);
             f32 radius = (f32)HEIGHT/2 * 0.33f;
             hmm_vec2 point = HMM_Vec2(x, y);
             if(HMM_Length(center - point) < radius) {
@@ -216,6 +253,7 @@ renderPixels(Color* pixels) {
     }
 }
 
+#include <iostream>
 int
 main(int argc, char** argv) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -223,7 +261,7 @@ main(int argc, char** argv) {
         assert("SDL_Error" == error);
         return -1;
     }
-    atexit(SDL_Quit);
+    atScopeExit(SDL_Quit());
 
     char* windowTitle = (char*)"roju_tracer";
     SDL_Window* window = SDL_CreateWindow(
@@ -232,6 +270,7 @@ main(int argc, char** argv) {
         SDL_WINDOWPOS_CENTERED,
         WIDTH, HEIGHT,
         0);
+    atScopeExit(SDL_DestroyWindow(window));
 
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
@@ -292,6 +331,4 @@ main(int argc, char** argv) {
             }
         }
     }
-
-    SDL_DestroyWindow(window);
 }
