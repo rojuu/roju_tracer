@@ -27,8 +27,21 @@ typedef i16 b16;
 typedef i32 b32;
 typedef i64 b64;
 
-const int WIDTH  = 640;
-const int HEIGHT = 480;
+//Scope exit from http://the-witness.net/news/2012/11/scopeexit-in-c11/
+template <typename F>
+struct ScopeExit {
+    ScopeExit(F f) : f(f) {}
+    ~ScopeExit() { f(); }
+    F f;
+};
+template <typename F>
+ScopeExit<F> MakeScopeExit(F f) {
+    return ScopeExit<F>(f);
+};
+#define DO_STRING_JOIN2(arg1, arg2) arg1 ## arg2
+#define STRING_JOIN2(arg1, arg2) DO_STRING_JOIN2(arg1, arg2)
+#define atScopeExit(code) \
+    auto STRING_JOIN2(scope_exit_, __LINE__) = MakeScopeExit([=](){code;})
 
 template<typename T>
 static inline T*
@@ -36,18 +49,8 @@ allocate(size_t count) {
     return (T*)calloc(count, sizeof(T));
 }
 
-class DeferredTask {
-    std::function<void()> func_;
-public:
-    DeferredTask(std::function<void()> func) :
-    func_(func) {
-    }
-    ~DeferredTask() {
-        func_();
-    }
-    DeferredTask& operator=(const DeferredTask&) = delete;
-    DeferredTask(const DeferredTask&) = delete;
-};
+const int WIDTH  = 640;
+const int HEIGHT = 480;
 
 struct Color {
     union {
@@ -182,6 +185,7 @@ renderPixels(Color* pixels) {
 
     const i32 sphereCount = 1;
     Object** objects = allocate<Object*>(sphereCount);
+    atScopeExit(free(objects));
 
     #define ALLOC_OBJECT_ARRAY(typename, varname, count) \
         typename* varname = allocate<typename>(count); \
@@ -189,7 +193,7 @@ renderPixels(Color* pixels) {
             varname[i] = typename(); \
             objects[i] = &(varname[i]); \
         } \
-        typename ## _deferred = DeferredTask([](){ free(varname) });
+        atScopeExit(free(varname));
     ALLOC_OBJECT_ARRAY(Sphere, spheres, sphereCount)
     #undef ALLOC_OBJECT_ARRAY
 
@@ -210,8 +214,6 @@ renderPixels(Color* pixels) {
             }
         }
     }
-
-    free(objects);
 }
 
 int
