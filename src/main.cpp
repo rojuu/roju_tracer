@@ -187,7 +187,6 @@ trace(Ray ray, int depth, int maxRayDepth, Light light, Object** objects, i32 ob
     hmm_vec3 pHit;
     hmm_vec3 nHit;
     for (int i = 0; i < objectCount; ++i) {
-        object = objects[i];
         if (intersect(objects[i], ray, &pHit, &nHit)) {
             f32 distance = HMM_ABS(HMM_Length(pHit - ray.origin));
             if (distance < minDistance) {
