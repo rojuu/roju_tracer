@@ -51,7 +51,7 @@ allocate(size_t count) {
 const int WIDTH  = 640;
 const int HEIGHT = 480;
 
-struct Color {
+struct Color32 {
     union {
         u32 value;
         struct {
@@ -60,9 +60,11 @@ struct Color {
     };
 };
 
-static inline Color
+typedef hmm_vec3 Color;
+
+static inline Color32
 makeColor(u8 r, u8 g, u8 b, u8 a = 255) {
-    Color result;
+    Color32 result;
     result.r = r;
     result.g = g;
     result.b = b;
@@ -71,7 +73,7 @@ makeColor(u8 r, u8 g, u8 b, u8 a = 255) {
 }
 
 static inline void
-setPixelColor(Color* pixels, i32 x, i32 y, Color color) {
+setPixelColor(Color32* pixels, i32 x, i32 y, Color32 color) {
     pixels[y * WIDTH + x] = color;
 }
 
@@ -82,11 +84,11 @@ struct Ray {
 
 struct Light {
     hmm_vec3 position;
-    hmm_vec3 color;
+    Color color;
 };
 
 struct Material {
-    hmm_vec3 color;
+    Color color;
     b32 isGlass;
     i32 refractionIndex;
 };
@@ -104,23 +106,23 @@ struct Object {
     ObjectType type;
     Material* material;
 };
-struct Sphere : Object {
+struct Sphere : public Object {
     Sphere() { type = OT_SPHERE; }
     hmm_vec3 position;
     f32 radius;
 };
-struct Plane : Object {
+struct Plane : public Object {
     Plane() { type = OT_PLANE; }
     hmm_vec3 p;
     hmm_vec3 n;
 };
-struct Disk : Object {
+struct Disk : public Object {
     Disk() { type = OT_DISK; }
     hmm_vec3 position;
     hmm_vec3 normal;
     f32 radius;
 };
-struct AABBBox : Object {
+struct AABBBox : public Object {
     AABBBox() { type = OT_AABB_BOX; }
     hmm_vec3 position;
     hmm_vec3 bounds; // Box width == x * 2;
@@ -142,10 +144,43 @@ fresnel(i32 refractionIndex, hmm_vec3 hitNormal, hmm_vec3 rayDirection, f32* out
 
 static b32
 intersect(Object* object, Ray ray, hmm_vec3* out_pHit, hmm_vec3* out_nHit) {
+    if(!object) {
+        SDL_Log("Supposedly null!");
+        return false;
+    };
+    switch(object->type){
+        case OT_SPHERE: {
+            Sphere* sphere = (Sphere*)object;
+            if(sphere) {
+                SDL_Log("Supposedly a sphere");
+                return true;
+            } else {
+                SDL_Log("Supposedly a non-sphere");
+                return false;
+            }
+            break;
+        }
+        case OT_PLANE: {
+                Plane* plane = (Plane*)object;
+                if(plane){
+                    SDL_Log("Supposedly a plane");
+                } else {
+                    SDL_Log("Supposedly a non-plane");
+                }
+            break;
+        }
+        case OT_DISK:
+        case OT_AABB_BOX:
+        case OT_NONE:
+        default: {
+            SDL_Log("Supposedly nothing?");
+            break;
+        }
+    }
     return false;
 }
 
-static hmm_vec3 //color
+static Color
 trace(Ray ray, int depth, int maxRayDepth, Light light, Object** objects, i32 objectCount) {
     Object *object = NULL;
     f32 minDistance = INFINITY;
@@ -169,13 +204,13 @@ trace(Ray ray, int depth, int maxRayDepth, Light light, Object** objects, i32 ob
         // compute reflection
         Ray reflectionRay = computeReflectionRay(ray.direction, nHit);
         // recurse
-        hmm_vec3 reflectionColor = trace(reflectionRay, depth+1, maxRayDepth, light, objects, objectCount);
+        Color reflectionColor = trace(reflectionRay, depth+1, maxRayDepth, light, objects, objectCount);
 
         Ray refractionRay = computeRefractionRay(
             object->material->refractionIndex,
             ray.direction,
             nHit);
-        hmm_vec3 refractionColor = trace(refractionRay, depth+1, maxRayDepth, light, objects, objectCount);
+        Color refractionColor = trace(refractionRay, depth+1, maxRayDepth, light, objects, objectCount);
 
         float Kr, Kt;
         fresnel(
@@ -203,20 +238,23 @@ trace(Ray ray, int depth, int maxRayDepth, Light light, Object** objects, i32 ob
 
 //TODO: Memory pool instead of calling allocate up front, probably should define the memory outside of this function anyway
 static void
-renderPixels(Color* pixels) {
-    memset(pixels, 0, sizeof(Color) * WIDTH * HEIGHT);
+renderPixels(Color32* pixels) {
+    memset(pixels, 0, sizeof(Color32) * WIDTH * HEIGHT);
+
+    hmm_vec3 eyePosition = HMM_Vec3(0, 0, 10);
 
     const i32 sphereCount = 1;
     const i32 planeCount = 1;
-    const i32 objectCount = sphereCount + planeCount;
-    Object** objects = allocate<Object*>(objectCount);
+    const i32 objectCapacity = sphereCount + planeCount;
+    Object** objects = allocate<Object*>(objectCapacity);
     atScopeExit(free(objects));
 
+    i32 objectCount = 0;
     #define ALLOC_OBJECT_ARRAY(typename, varname, count) \
         typename* varname = allocate<typename>(count); \
         for(i32 i = 0; i < count; i++){ \
             varname[i] = typename(); \
-            objects[i] = &(varname[i]); \
+            objects[objectCount++] = &(varname[i]); \
         } \
         atScopeExit(free(varname));
     ALLOC_OBJECT_ARRAY(Sphere, spheres, sphereCount);
@@ -239,10 +277,21 @@ renderPixels(Color* pixels) {
     plane->p = HMM_Vec3(0, -10, 0);
     plane->n = HMM_Vec3(0, 1, 0);
 
+    Light light;
+    light.color = HMM_Vec3(1,1,1);
+    light.position = HMM_Vec3(-10, 10, -10);
+
+    Ray primaryRay;
+    primaryRay.direction = HMM_Vec3(0, 0, -1);
+    primaryRay.origin = eyePosition;
+
+    trace(primaryRay, 0, 10, light, objects, objectCount);
+
+    #if 0
     hmm_vec2 center = HMM_Vec2((f32)WIDTH/2.f, (f32)HEIGHT/2.f);
     for(i32 y = 0; y < HEIGHT; y++) {
         for(i32 x = 0; x < WIDTH; x++) {
-            Color green = makeColor(0, 255, 0);
+            Color32 green = makeColor(0, 255, 0);
             f32 radius = (f32)HEIGHT/2 * 0.33f;
             hmm_vec2 point = HMM_Vec2(x, y);
             if(HMM_Length(center - point) < radius) {
@@ -250,6 +299,7 @@ renderPixels(Color* pixels) {
             }
         }
     }
+    #endif
 }
 
 int
@@ -285,7 +335,7 @@ main(int argc, char** argv) {
     SDL_RenderClear(renderer);
     SDL_RenderPresent(renderer);
 
-    Color* pixels = allocate<Color>(WIDTH * HEIGHT);
+    Color32* pixels = allocate<Color32>(WIDTH * HEIGHT);
 
     b32 running = true;
     f64 currentTime = (f64)SDL_GetPerformanceCounter() /
@@ -306,7 +356,7 @@ main(int argc, char** argv) {
                     break;
                 }
 
-                case SDL_KEYDOWN: {
+                case SDL_KEYUP: {
                     switch (event.key.keysym.sym) {
                         case SDLK_ESCAPE: {
                             running = false;
@@ -318,7 +368,7 @@ main(int argc, char** argv) {
                             SDL_SetWindowTitle(window, "Rendering");
                             renderPixels(pixels);
 
-                            SDL_UpdateTexture(texture, NULL, pixels, WIDTH * sizeof(Color));
+                            SDL_UpdateTexture(texture, NULL, pixels, WIDTH * sizeof(Color32));
 
                             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
                             SDL_RenderClear(renderer);
