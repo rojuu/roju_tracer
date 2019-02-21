@@ -145,28 +145,17 @@ fresnel(i32 refractionIndex, hmm_vec3 hitNormal, hmm_vec3 rayDirection, f32* out
 static b32
 intersect(Object* object, Ray ray, hmm_vec3* out_pHit, hmm_vec3* out_nHit) {
     if(!object) {
-        SDL_Log("Supposedly null!");
         return false;
     };
     switch(object->type){
         case OT_SPHERE: {
             Sphere* sphere = (Sphere*)object;
             if(sphere) {
-                SDL_Log("Supposedly a sphere");
                 return true;
-            } else {
-                SDL_Log("Supposedly a non-sphere");
-                return false;
             }
             break;
         }
         case OT_PLANE: {
-                Plane* plane = (Plane*)object;
-                if(plane){
-                    SDL_Log("Supposedly a plane");
-                } else {
-                    SDL_Log("Supposedly a non-plane");
-                }
             break;
         }
         case OT_DISK:
@@ -240,6 +229,7 @@ static void
 renderPixels(Color32* pixels) {
     memset(pixels, 0, sizeof(Color32) * WIDTH * HEIGHT);
 
+    #if 0
     hmm_vec3 eyePosition = HMM_Vec3(0, 0, 10);
 
     const i32 sphereCount = 1;
@@ -286,7 +276,7 @@ renderPixels(Color32* pixels) {
 
     trace(primaryRay, 0, 10, light, objects, objectCount);
 
-    #if 0
+    #else
     hmm_vec2 center = HMM_Vec2((f32)WIDTH/2.f, (f32)HEIGHT/2.f);
     for(i32 y = 0; y < HEIGHT; y++) {
         for(i32 x = 0; x < WIDTH; x++) {
@@ -297,8 +287,15 @@ renderPixels(Color32* pixels) {
                 setPixelColor(pixels, x, y, green);
             }
         }
+        SDL_Delay(1);
     }
     #endif
+}
+
+int
+backgroundRenderThread(void* pixels) {
+    renderPixels((Color32*)pixels);
+    return 0;
 }
 
 int
@@ -336,6 +333,8 @@ main(int argc, char** argv) {
 
     Color32* pixels = allocate<Color32>(WIDTH * HEIGHT);
 
+    SDL_Thread* renderThread = SDL_CreateThread(backgroundRenderThread, "backgroundRenderThread", (void *)pixels);
+
     b32 running = true;
     f64 currentTime = (f64)SDL_GetPerformanceCounter() /
                        (f64)SDL_GetPerformanceFrequency();
@@ -355,32 +354,24 @@ main(int argc, char** argv) {
                     break;
                 }
 
-                case SDL_KEYUP: {
+                case SDL_KEYDOWN: {
                     switch (event.key.keysym.sym) {
                         case SDLK_ESCAPE: {
                             running = false;
                             break;
-                        }
-
-                        // Do the rendering thing
-                        case SDLK_RETURN: {
-                            SDL_SetWindowTitle(window, "Rendering");
-                            renderPixels(pixels);
-
-                            SDL_UpdateTexture(texture, NULL, pixels, WIDTH * sizeof(Color32));
-
-                            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-                            SDL_RenderClear(renderer);
-                            SDL_RenderCopy(renderer, texture, NULL, NULL);
-                            SDL_RenderPresent(renderer);
-
-                            SDL_SetWindowTitle(window, windowTitle);
                         }
                     }
                     break;
                 }
             }
         }
+
+        SDL_UpdateTexture(texture, NULL, pixels, WIDTH * sizeof(Color32));
+
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+        SDL_RenderCopy(renderer, texture, NULL, NULL);
+        SDL_RenderPresent(renderer);
     }
 
     return 0;
