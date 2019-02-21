@@ -336,15 +336,7 @@ main(int argc, char** argv) {
     SDL_Thread* renderThread = SDL_CreateThread(backgroundRenderThread, "backgroundRenderThread", (void *)pixels);
 
     b32 running = true;
-    f64 currentTime = (f64)SDL_GetPerformanceCounter() /
-                       (f64)SDL_GetPerformanceFrequency();
-    f64 lastTime = 0;
-    f64 deltaTime = 0;
     while (running) {
-        lastTime = currentTime;
-        currentTime =  (f64)SDL_GetPerformanceCounter() /
-                       (f64)SDL_GetPerformanceFrequency();
-        deltaTime = (f64)(currentTime - lastTime);
 
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
