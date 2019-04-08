@@ -110,7 +110,7 @@ setPixelColor(Color32* pixels, i32 x, i32 y, Color color) {
 static Color
 colorFromRay(Ray& ray) {
     Vec3 normalizedDirection = HMM_FastNormalize(ray.d);
-    f32 t = 0.5f * (normalizedDirection.y, + 1.0f);
+    f32 t = 0.5f * (normalizedDirection.y + 1.0f);
     return (1.0f-t)*vec3(1.0f, 1.0f, 1.0f) + t*vec3(0.5f, 0.7f, 1.0f);
 }
 
@@ -121,9 +121,9 @@ renderPixels(Color32* pixels) {
     f32 w = (f32)WIDTH  / 100.f;
     f32 h = (f32)HEIGHT / 100.f;
 
-    Vec3 lowerLeftCorner = vec3(-w, -h, 1);
+    Vec3 lowerLeftCorner = vec3(-w, -h, -1);
     Vec3 horizontal = vec3( w*2, 0, 0);
-    Vec3 vertical = vec3(0, h*2, 1);
+    Vec3 vertical = vec3(0, h*2, 0);
     Vec3 origin = vec3(0, 0, 0);
 
     for(i32 y = 0; y < HEIGHT; y++) {
@@ -209,7 +209,15 @@ main(int argc, char** argv) {
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, texture, NULL, NULL);
+
+        //SDL_RenderCopy(renderer, texture, NULL, NULL);
+
+        // Flipping for now, because the guide I'm using has the image going in reverse order, not sure why yet
+        SDL_Rect srcrect = { 0, 0, WIDTH, HEIGHT };
+        SDL_Rect dstrect = { 0, 0, WIDTH, HEIGHT };
+        SDL_RendererFlip flip = (SDL_RendererFlip)(SDL_FLIP_VERTICAL);
+        SDL_RenderCopyEx(renderer, texture, &srcrect, &dstrect, 0, 0, flip);
+
         SDL_RenderPresent(renderer);
     }
 
