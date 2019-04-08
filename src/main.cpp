@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <SDL2/SDL.h>
 
-#define HANDMADE_MATH_IMPLEMENTATION
-#include "HandmadeMath.h"
+#include "HandmadeMath.cpp"
+#include "stb_image_write.cpp"
 
 #include <assert.h>
 #include <cstring>
@@ -90,7 +90,8 @@ makeColor(f32 r, f32 g, f32 b) {
 static inline Color32
 makeColor32(u8 r, u8 g, u8 b, u8 a = 255) {
     Color32 result;
-    result.value = (r << 24) + (g << 16) + (b << 8) + (a << 0);
+    //result.value = (r << 24) + (g << 16) + (b << 8) + (a << 0);
+    result.value = (a << 24) + (b << 16) + (g << 8) + (r << 0);
     return result;
 }
 
@@ -128,20 +129,26 @@ renderPixels(Color32* pixels) {
 
     for(i32 y = 0; y < HEIGHT; y++) {
         for(i32 x = 0; x < WIDTH; x++) {
-            f32 u = (f32)x / (f32)HEIGHT;
-            f32 v = (f32)y / (f32)WIDTH;
+            f32 u =       (f32)x / (f32)WIDTH;
+            f32 v = 1.0 - (f32)y / (f32)HEIGHT;
 
             Ray r = Ray(origin, lowerLeftCorner + u*horizontal + v*vertical);
-
             Color color = colorFromRay(r);
             setPixelColor(pixels, x, y, color);
         }
     }
 }
 
+static void
+savePixels(Color32* pixels) {
+    stbi_write_png("render.png", WIDTH, HEIGHT, 4, pixels, WIDTH*sizeof(Color32));
+}
+
 int
-backgroundRenderThread(void* pixels) {
-    renderPixels((Color32*)pixels);
+backgroundRenderAndSaveThread(void* data) {
+    Color32* pixels = (Color32*)data;
+    renderPixels(pixels);
+    savePixels(pixels);
     return 0;
 }
 
@@ -165,7 +172,7 @@ main(int argc, char** argv) {
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_TARGETTEXTURE);
 
     SDL_Texture* texture = SDL_CreateTexture(renderer,
-        SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STATIC, WIDTH, HEIGHT);
+        SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, WIDTH, HEIGHT);
 
     if (!window || !renderer || !texture) {
         const char* error = SDL_GetError();
@@ -180,7 +187,7 @@ main(int argc, char** argv) {
 
     Color32* pixels = allocate<Color32>(WIDTH * HEIGHT);
 
-    SDL_Thread* renderThread = SDL_CreateThread(backgroundRenderThread, "backgroundRenderThread", (void *)pixels);
+    SDL_Thread* renderThread = SDL_CreateThread(backgroundRenderAndSaveThread, "backgroundRenderAndSaveThread", (void *)pixels);
 
     b32 running = true;
     while (running) {
@@ -210,13 +217,7 @@ main(int argc, char** argv) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
-        //SDL_RenderCopy(renderer, texture, NULL, NULL);
-
-        // Flipping for now, because the guide I'm using has the image going in reverse order, not sure why yet
-        SDL_Rect srcrect = { 0, 0, WIDTH, HEIGHT };
-        SDL_Rect dstrect = { 0, 0, WIDTH, HEIGHT };
-        SDL_RendererFlip flip = (SDL_RendererFlip)(SDL_FLIP_VERTICAL);
-        SDL_RenderCopyEx(renderer, texture, &srcrect, &dstrect, 0, 0, flip);
+        SDL_RenderCopy(renderer, texture, NULL, NULL);
 
         SDL_RenderPresent(renderer);
     }

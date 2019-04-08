@@ -92,6 +92,9 @@
 */
 
 
+//NOTE(Roni): Added here so I don't need to put this in my main.cpp
+#define HANDMADE_MATH_IMPLEMENTATION
+
 /* let's figure out if SSE is really available (unless disabled anyway)
    (it isn't on non-x86/x86_64 platforms or even x86 without explicit SSE support)
    => only use "#ifdef HANDMADE_MATH__USE_SSE" to check for SSE support below this block! */
