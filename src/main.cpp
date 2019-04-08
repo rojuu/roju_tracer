@@ -57,6 +57,16 @@ struct Color32 {
 
 typedef hmm_vec3 Color;
 
+static inline hmm_vec3
+makeVec3(f32 a, f32 b, f32 c) {
+    return HMM_Vec3(a, b, c);
+}
+
+static inline Color
+makeColor(f32 r, f32 g, f32 b) {
+    return makeVec3(r, g, b);
+}
+
 static inline Color32
 makeColor32(u8 r, u8 g, u8 b, u8 a = 255) {
     Color32 result;
@@ -72,25 +82,20 @@ makeColor32(Color color) {
 }
 
 static inline void
-setPixelColor(Color32* pixels, i32 x, i32 y, Color32 color) {
-    pixels[y * WIDTH + x] = color;
+setPixelColor(Color32* pixels, i32 x, i32 y, Color color) {
+    Color32 color32 = makeColor32(color);
+    pixels[y * WIDTH + x] = color32;
 }
 
 static void
 renderPixels(Color32* pixels) {
     memset(pixels, 0, sizeof(Color32) * WIDTH * HEIGHT);
 
-    hmm_vec2 center = HMM_Vec2((f32)WIDTH/2.f, (f32)HEIGHT/2.f);
     for(i32 y = 0; y < HEIGHT; y++) {
         for(i32 x = 0; x < WIDTH; x++) {
-            Color32 green = makeColor32(0, 255, 0);
-            f32 radius = (f32)HEIGHT/2 * 0.33f;
-            hmm_vec2 point = HMM_Vec2(x, y);
-            if(HMM_Length(center - point) < radius) {
-                setPixelColor(pixels, x, y, green);
-            }
+            Color color = makeColor((float)x / WIDTH, (float)y / HEIGHT, 0.2f);
+            setPixelColor(pixels, x, y, color);
         }
-        SDL_Delay(1);
     }
 }
 
