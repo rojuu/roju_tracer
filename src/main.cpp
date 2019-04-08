@@ -51,20 +51,40 @@ allocate(size_t count) {
 const int WIDTH  = 640;
 const int HEIGHT = 480;
 
+typedef hmm_vec3 Vec3;
+typedef hmm_vec4 Vec4;
+
+static inline Vec3
+vec3(f32 a, f32 b, f32 c) {
+    return HMM_Vec3(a, b, c);
+}
+
+static inline Vec4
+vec4(f32 a, f32 b, f32 c, f32 d) {
+    return HMM_Vec4(a, b, c, d);
+}
+
+struct Ray {
+    Vec3 o;
+    Vec3 d;
+
+    Ray(Vec3 o, Vec3 d) : o(o), d(d) { }
+
+    Vec3 t(float t) {
+        return o + t*d;
+    }
+};
+
 struct Color32 {
     u32 value;
 };
 
-typedef hmm_vec3 Color;
+typedef Vec3 Color;
 
-static inline hmm_vec3
-makeVec3(f32 a, f32 b, f32 c) {
-    return HMM_Vec3(a, b, c);
-}
 
 static inline Color
 makeColor(f32 r, f32 g, f32 b) {
-    return makeVec3(r, g, b);
+    return vec3(r, g, b);
 }
 
 static inline Color32
@@ -77,7 +97,7 @@ makeColor32(u8 r, u8 g, u8 b, u8 a = 255) {
 static inline Color32
 makeColor32(Color color) {
     Color32 result;
-    result = makeColor32(color.R * 255, color.G * 255, color.B * 255);
+    result = makeColor32(color.r * 255, color.g * 255, color.b * 255);
     return result;
 }
 
@@ -87,13 +107,33 @@ setPixelColor(Color32* pixels, i32 x, i32 y, Color color) {
     pixels[y * WIDTH + x] = color32;
 }
 
+static Color
+colorFromRay(Ray& ray) {
+    Vec3 normalizedDirection = HMM_FastNormalize(ray.d);
+    f32 t = 0.5f * (normalizedDirection.y, + 1.0f);
+    return (1.0f-t)*vec3(1.0f, 1.0f, 1.0f) + t*vec3(0.5f, 0.7f, 1.0f);
+}
+
 static void
 renderPixels(Color32* pixels) {
     memset(pixels, 0, sizeof(Color32) * WIDTH * HEIGHT);
 
+    f32 w = (f32)WIDTH  / 100.f;
+    f32 h = (f32)HEIGHT / 100.f;
+
+    Vec3 lowerLeftCorner = vec3(-w, -h, 1);
+    Vec3 horizontal = vec3( w*2, 0, 0);
+    Vec3 vertical = vec3(0, h*2, 1);
+    Vec3 origin = vec3(0, 0, 0);
+
     for(i32 y = 0; y < HEIGHT; y++) {
         for(i32 x = 0; x < WIDTH; x++) {
-            Color color = makeColor((float)x / WIDTH, (float)y / HEIGHT, 0.2f);
+            f32 u = (f32)x / (f32)HEIGHT;
+            f32 v = (f32)y / (f32)WIDTH;
+
+            Ray r = Ray(origin, lowerLeftCorner + u*horizontal + v*vertical);
+
+            Color color = colorFromRay(r);
             setPixelColor(pixels, x, y, color);
         }
     }
