@@ -81,7 +81,6 @@ struct Color32 {
 
 typedef Vec3 Color;
 
-
 static inline Color
 makeColor(f32 r, f32 g, f32 b) {
     return vec3(r, g, b);
@@ -191,7 +190,6 @@ main(int argc, char** argv) {
 
     b32 running = true;
     while (running) {
-
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             switch (event.type) {

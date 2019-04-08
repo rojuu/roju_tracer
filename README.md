@@ -5,12 +5,21 @@ A ray tracing thing with the help of [Ray Tracing in a Weekend](http://www.realt
 ![alt text](render.png "Logo Title Text 1")
 
 ## Compiling
-Just compile `src/main.cpp` and link against the SDL2 library. Make sure you have CRT on your system as well. You should be able to just use the Makefile on Linux.
+Just compile `src/main.cpp` and link against the SDL2 library. Make sure you have C/C++ runtime libraries on your system as well.
+
+### Linux
+You should be able to just use the Makefile on Linux.
+
+### Mac
+You should be able to use the Makefile if you have installed SDL2 using homebrew.
+
+### Windows
+The build.bat file might work on windows, but hasn't been tested in a while. Just point %SDL2% to your SDL2 library folder, or install SDL2 in way your compiler can find it.
 
 ## Dependencies
 You need to link against these.
 - [SDL2](http://libsdl.org/)
-- C++/C runtime libraries
+- C/C++ runtime libraries
 
 Single header libraries, so doesn't need linking.
 - [HandmadeMath](https://github.com/HandmadeMath/Handmade-Math)
