@@ -4,6 +4,8 @@
 #include "HandmadeMath.cpp"
 #include "stb_image_write.cpp"
 
+#include <atomic>
+
 #include <assert.h>
 #include <cstring>
 
@@ -129,7 +131,7 @@ renderPixels(Color32* pixels) {
     for(i32 y = 0; y < HEIGHT; y++) {
         for(i32 x = 0; x < WIDTH; x++) {
             f32 u =       (f32)x / (f32)WIDTH;
-            f32 v = 1.0 - (f32)y / (f32)HEIGHT;
+            f32 v = 1.0 - (f32)y / (f32)HEIGHT; // Flipping the V so we go from bottom to top
 
             Ray r = Ray(origin, lowerLeftCorner + u*horizontal + v*vertical);
             Color color = colorFromRay(r);
@@ -143,11 +145,14 @@ savePixels(Color32* pixels) {
     stbi_write_png("render.png", WIDTH, HEIGHT, 4, pixels, WIDTH*sizeof(Color32));
 }
 
+static std::atomic<bool> gBackgroundThreadDone;
+
 int
 backgroundRenderAndSaveThread(void* data) {
     Color32* pixels = (Color32*)data;
     renderPixels(pixels);
     savePixels(pixels);
+    gBackgroundThreadDone = true;
     return 0;
 }
 
@@ -186,7 +191,10 @@ main(int argc, char** argv) {
 
     Color32* pixels = allocate<Color32>(WIDTH * HEIGHT);
 
-    SDL_Thread* renderThread = SDL_CreateThread(backgroundRenderAndSaveThread, "backgroundRenderAndSaveThread", (void *)pixels);
+    gBackgroundThreadDone = false;
+    SDL_Thread* backgroundThread = SDL_CreateThread(backgroundRenderAndSaveThread, "backgroundRenderAndSaveThread", (void *)pixels);
+
+    bool backgroundThreadExpectedState = !gBackgroundThreadDone;
 
     b32 running = true;
     while (running) {
@@ -207,6 +215,15 @@ main(int argc, char** argv) {
                     }
                     break;
                 }
+            }
+        }
+
+        if (backgroundThreadExpectedState != gBackgroundThreadDone) {
+            backgroundThreadExpectedState = gBackgroundThreadDone;
+            if(backgroundThreadExpectedState) {
+                SDL_SetWindowTitle(window, "Done rendering");
+            } else {
+                SDL_SetWindowTitle(window, "Rendering...");
             }
         }
 
