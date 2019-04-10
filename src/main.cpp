@@ -45,7 +45,7 @@ ScopeExit<F> MakeScopeExit(F f) {
     auto CONCAT(scope_exit_, __LINE__) = MakeScopeExit([=](){code;})
 
 template<typename T>
-static inline T*
+static T*
 allocate(size_t count) {
     return (T*)calloc(count, sizeof(T));
 }
@@ -56,14 +56,47 @@ const int HEIGHT = 480;
 typedef hmm_vec3 Vec3;
 typedef hmm_vec4 Vec4;
 
-static inline Vec3
+static Vec3
 vec3(f32 a, f32 b, f32 c) {
     return HMM_Vec3(a, b, c);
 }
 
-static inline Vec4
+static Vec4
 vec4(f32 a, f32 b, f32 c, f32 d) {
     return HMM_Vec4(a, b, c, d);
+}
+
+
+struct Color32 {
+    u32 value;
+};
+
+typedef Vec3 Color;
+
+static Color
+makeColor(f32 r, f32 g, f32 b) {
+    return vec3(r, g, b);
+}
+
+static Color32
+makeColor32(u8 r, u8 g, u8 b, u8 a = 255) {
+    Color32 result;
+    //result.value = (r << 24) + (g << 16) + (b << 8) + (a << 0);
+    result.value = (a << 24) + (b << 16) + (g << 8) + (r << 0);
+    return result;
+}
+
+static Color32
+makeColor32(Color color) {
+    Color32 result;
+    result = makeColor32(color.r * 255, color.g * 255, color.b * 255);
+    return result;
+}
+
+static void
+setPixelColor(Color32* pixels, i32 x, i32 y, Color color) {
+    Color32 color32 = makeColor32(color);
+    pixels[y * WIDTH + x] = color32;
 }
 
 struct Ray {
@@ -72,48 +105,95 @@ struct Ray {
 
     Ray(Vec3 o, Vec3 d) : o(o), d(d) { }
 
-    Vec3 t(float t) {
+    Vec3 t(float t) const {
         return o + t*d;
     }
 };
 
-struct Color32 {
-    u32 value;
+struct HitInfo {
+    f32 t;
+    Vec3 point;
+    Vec3 normal;
 };
 
-typedef Vec3 Color;
+struct Hittable {
+    virtual bool hit(const Ray& ray, f32 tMin, f32 tMax, HitInfo& info) const = 0;
+};
 
-static inline Color
-makeColor(f32 r, f32 g, f32 b) {
-    return vec3(r, g, b);
-}
+struct Sphere : public Hittable {
+    Vec3 center;
+    f32 radius;
 
-static inline Color32
-makeColor32(u8 r, u8 g, u8 b, u8 a = 255) {
-    Color32 result;
-    //result.value = (r << 24) + (g << 16) + (b << 8) + (a << 0);
-    result.value = (a << 24) + (b << 16) + (g << 8) + (r << 0);
-    return result;
-}
+    Sphere() { }
+    Sphere(Vec3 center, f32 radius)
+        : center(center), radius(radius)
+    {
+    }
 
-static inline Color32
-makeColor32(Color color) {
-    Color32 result;
-    result = makeColor32(color.r * 255, color.g * 255, color.b * 255);
-    return result;
-}
+    virtual bool
+    hit(const Ray& ray, f32 tMin, f32 tMax, HitInfo& info) const {
+        Vec3 oc = ray.o - center;
+        f32 a = HMM_Dot(ray.d, ray.d);
+        f32 b = HMM_Dot(oc, ray.d);
+        f32 c = HMM_Dot(oc, oc) - radius*radius;
+        f32 discriminant = b*b - a*c;
+        if (discriminant > 0) {
+            f32 temp = (-b - sqrt(b*b-a*c))/a;
+            if (temp < tMax && temp > tMin) {
+                info.t = temp;
+                info.point = ray.t(info.t);
+                info.normal = (info.point - center) / radius;
+                return true;
+            }
+            temp = (-b + sqrt(b*b-a*c))/a;
+            if (temp < tMax && temp > tMin) {
+                info.t = temp;
+                info.point = ray.t(info.t);
+                info.normal = (info.point - center) / radius;
+                return true;
+            }
+        }
+        return false;
+    }
+};
 
-static inline void
-setPixelColor(Color32* pixels, i32 x, i32 y, Color color) {
-    Color32 color32 = makeColor32(color);
-    pixels[y * WIDTH + x] = color32;
-}
+struct HittableList : public Hittable {
+    Hittable** list;
+    size_t listSize;
+
+    HittableList() { }
+    HittableList(Hittable** _list, size_t size)
+    {
+        list = _list;
+        listSize = size;
+    }
+
+    virtual bool
+    hit(const Ray& ray, f32 tMin, f32 tMax, HitInfo& info) const {
+        HitInfo tempInfo;
+        bool hitSomething = false;
+        f64 closestSoFar = tMax;
+        for (int i = 0; i < listSize; i++) {
+            if (list[i]->hit(ray, tMin, closestSoFar, tempInfo)) {
+                hitSomething = true;
+                closestSoFar = tempInfo.t;
+                info = tempInfo;
+            }
+        }
+        return hitSomething;
+    }
+};
 
 static Color
-colorFromRay(Ray& ray) {
-    Vec3 normalizedDirection = HMM_FastNormalize(ray.d);
-    f32 t = 0.5f * (normalizedDirection.y + 1.0f);
-    return (1.0f-t)*vec3(1.0f, 1.0f, 1.0f) + t*vec3(0.5f, 0.7f, 1.0f);
+colorFromRay(Ray& ray, Hittable* world) {
+    HitInfo info;
+    if (world->hit(ray, 0, MAXFLOAT, info)) {
+        return 0.5f*vec3(info.normal.x+1, info.normal.y+1, info.normal.z+1);
+    } else {
+        Vec3 unitDirection = HMM_FastNormalize(ray.d);
+        f32 t = 0.5f * (unitDirection.y + 1.0f);
+        return (1.0f-t)*vec3(1.0f, 1.0f, 1.0f) + t*vec3(0.5f, 0.7f, 1.0f);
+    }
 }
 
 static void
@@ -128,13 +208,19 @@ renderPixels(Color32* pixels) {
     Vec3 vertical = vec3(0, h*2, 0);
     Vec3 origin = vec3(0, 0, 0);
 
-    for(i32 y = 0; y < HEIGHT; y++) {
-        for(i32 x = 0; x < WIDTH; x++) {
+    Hittable* list[2];
+    list[0] = new Sphere(vec3(0,0,-1), 0.5);
+    list[1] = new Sphere(vec3(0,-100.5, -1), 100);
+
+    Hittable* world = new HittableList(list, 2);
+
+    for (i32 y = 0; y < HEIGHT; y++) {
+        for (i32 x = 0; x < WIDTH; x++) {
             f32 u =       (f32)x / (f32)WIDTH;
             f32 v = 1.0 - (f32)y / (f32)HEIGHT; // Flipping the V so we go from bottom to top
 
             Ray r = Ray(origin, lowerLeftCorner + u*horizontal + v*vertical);
-            Color color = colorFromRay(r);
+            Color color = colorFromRay(r, world);
             setPixelColor(pixels, x, y, color);
         }
     }
