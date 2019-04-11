@@ -62,12 +62,13 @@ static void
 renderPixels(Color32* pixels) {
     memset(pixels, 0, sizeof(Color32) * WIDTH * HEIGHT);
 
-    const size_t lc=4;
+    const size_t lc=5;
     Hittable* list[lc];
-    list[0] = new Sphere(vec3(0,0,-1), 0.5, new Lambertian(vec3(0.8, 0.3, 0.3)));
+    list[0] = new Sphere(vec3(0,0,-1), 0.5, new Lambertian(vec3(0.1, 0.2, 0.5)));
     list[1] = new Sphere(vec3(0,-100.5, -1), 100, new Lambertian(vec3(0.8, 0.8, 0.0)));
-    list[2] = new Sphere(vec3(1, 0, -1), 0.5, new Metal(vec3(0.8, 0.6, 0.2), 1.0));
-    list[3] = new Sphere(vec3(-1, 0, -1), 0.5, new Metal(vec3(0.8, 0.8, 0.8), 0.3));
+    list[2] = new Sphere(vec3(1, 0, -1), 0.5, new Metal(vec3(0.8, 0.6, 0.2), 0.3));
+    list[3] = new Sphere(vec3(-1, 0, -1), 0.5, new Dielectric(1.5));
+    list[4] = new Sphere(vec3(-1, 0, -1), -0.45, new Dielectric(1.5));
     Hittable* world = new HittableList(list, lc);
 
     for (i32 y = 0; y < HEIGHT; y++) {

@@ -1785,6 +1785,13 @@ HMM_INLINE hmm_vec3 operator-(hmm_vec3 Left, hmm_vec3 Right)
     return (Result);
 }
 
+HMM_INLINE hmm_vec3 operator-(hmm_vec3 v)
+{
+    hmm_vec3 Result = HMM_Vec3(-v.x, -v.y, -v.z);
+
+    return (Result);
+}
+
 HMM_INLINE hmm_vec4 operator-(hmm_vec4 Left, hmm_vec4 Right)
 {
     hmm_vec4 Result = HMM_SubtractVec4(Left, Right);

@@ -24,6 +24,26 @@ randomInUnitSphere() {
 }
 
 static Vec3
-reflect(const Vec3& a, const Vec3& b) {
-    return a - 2*HMM_Dot(a,b)*b;
+reflect(const Vec3& v, const Vec3& n) {
+    return v - 2*HMM_Dot(v,n)*n;
+}
+
+static bool
+refract(const Vec3& v, const Vec3& n, f32 niOverNt, Vec3& refracted) {
+    Vec3 uv = HMM_FastNormalize(v);
+    f32 dt = HMM_Dot(uv, n);
+    f32 discriminant = 1.0 - niOverNt*niOverNt*(1-dt*dt);
+    if (discriminant > 0) {
+        refracted = niOverNt*(uv - n*dt) - n*sqrt(discriminant);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static f32
+schlick(f32 cosine, f32 refIdx) {
+    f32 r0 = (1-refIdx) / (1+refIdx);
+    r0 = r0*r0;
+    return r0 * (1-r0)*pow((1- cosine),5);
 }
