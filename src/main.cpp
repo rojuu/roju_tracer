@@ -3,8 +3,10 @@
 
 #include "HandmadeMath.cpp"
 #include "stb_image_write.cpp"
+#include "pcg_random.hpp"
 
 #include <atomic>
+#include <random>
 
 #include <assert.h>
 #include <cstring>
@@ -66,7 +68,6 @@ vec4(f32 a, f32 b, f32 c, f32 d) {
     return HMM_Vec4(a, b, c, d);
 }
 
-
 struct Color32 {
     u32 value;
 };
@@ -98,6 +99,22 @@ setPixelColor(Color32* pixels, i32 x, i32 y, Color color) {
     Color32 color32 = makeColor32(color);
     pixels[y * WIDTH + x] = color32;
 }
+
+struct _Random {
+    pcg32 rng;
+    std::uniform_real_distribution<f32> dist;
+
+    _Random() {
+        pcg_extras::seed_seq_from<std::random_device> seed_source;
+        rng = pcg32(seed_source);
+        dist = std::uniform_real_distribution<f32>(0, 1);
+    }
+
+    f32 next() {
+        return dist(rng);
+    }
+};
+static _Random Random;
 
 struct Ray {
     Vec3 o;

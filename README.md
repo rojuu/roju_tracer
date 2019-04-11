@@ -21,6 +21,7 @@ You need to link against these.
 - [SDL2](http://libsdl.org/)
 - C/C++ runtime libraries
 
-Single header libraries, so doesn't need linking.
+Single-ish header libraries, so doesn't need linking, or any action really. These are all already included in the main.cpp
 - [HandmadeMath](https://github.com/HandmadeMath/Handmade-Math)
 - [stb_image_write](https://github.com/nothings/stb)
+- [PCG Random Number Generator C++ library](https://github.com/imneme/pcg-cpp)
