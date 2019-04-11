@@ -127,6 +127,29 @@ struct Ray {
     }
 };
 
+struct Camera {
+    Vec3 lowerLeftCorner;
+    Vec3 horizontal;
+    Vec3 vertical;
+    Vec3 origin;
+
+    Camera() {
+        f32 w = (f32)WIDTH  / 100.f;
+        f32 h = (f32)HEIGHT / 100.f;
+
+        lowerLeftCorner = vec3(-w, -h, -1);
+        horizontal = vec3( w*2, 0, 0);
+        vertical = vec3(0, h*2, 0);
+        origin = vec3(0, 0, 0);
+    }
+
+    Ray getRay(f32 u, f32 v) {
+        Ray ray = Ray(origin, lowerLeftCorner + u*horizontal + v*vertical);
+        return ray;
+    }
+};
+static Camera camera;
+
 struct HitInfo {
     f32 t;
     Vec3 point;
@@ -217,13 +240,7 @@ static void
 renderPixels(Color32* pixels) {
     memset(pixels, 0, sizeof(Color32) * WIDTH * HEIGHT);
 
-    f32 w = (f32)WIDTH  / 100.f;
-    f32 h = (f32)HEIGHT / 100.f;
-
-    Vec3 lowerLeftCorner = vec3(-w, -h, -1);
-    Vec3 horizontal = vec3( w*2, 0, 0);
-    Vec3 vertical = vec3(0, h*2, 0);
-    Vec3 origin = vec3(0, 0, 0);
+    const int SUBSTEPS = 100;
 
     Hittable* list[2];
     list[0] = new Sphere(vec3(0,0,-1), 0.5);
@@ -233,11 +250,15 @@ renderPixels(Color32* pixels) {
 
     for (i32 y = 0; y < HEIGHT; y++) {
         for (i32 x = 0; x < WIDTH; x++) {
-            f32 u =       (f32)x / (f32)WIDTH;
-            f32 v = 1.0 - (f32)y / (f32)HEIGHT; // Flipping the V so we go from bottom to top
+            Vec3 color = vec3(0,0,0);
+            for (i32 s = 0; s < SUBSTEPS; s++) {
+                f32 u =       ((f32)x + Random.next()) / (f32)WIDTH;
+                f32 v = 1.0 - ((f32)y + Random.next()) / (f32)HEIGHT; // Flipping the V so we go from bottom to top
 
-            Ray r = Ray(origin, lowerLeftCorner + u*horizontal + v*vertical);
-            Color color = colorFromRay(r, world);
+                Ray r = camera.getRay(u, v);
+                color += colorFromRay(r, world);
+            }
+            color /= (f32)SUBSTEPS;
             setPixelColor(pixels, x, y, color);
         }
     }
