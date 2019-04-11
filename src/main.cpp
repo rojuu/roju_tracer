@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <random>
+#include <math.h>
 
 #include <assert.h>
 #include <cstring>
@@ -23,22 +24,26 @@ struct Camera {
     Vec3 vertical;
     Vec3 origin;
 
-    Camera() {
-        f32 w = (f32)WIDTH  / 100.f;
-        f32 h = (f32)HEIGHT / 100.f;
-
-        lowerLeftCorner = vec3(-w, -h, -1);
-        horizontal = vec3( w*2, 0, 0);
-        vertical = vec3(0, h*2, 0);
-        origin = vec3(0, 0, 0);
+    Camera(Vec3 lookFrom, Vec3 lookAt, Vec3 vup, f32 vfov, f32 aspect) {
+        Vec3 u, v, w;
+        f32 theta = vfov*M_PI/180;
+        f32 halfHeight = tan(theta/2);
+        f32 halfWidth = aspect * halfHeight;
+        origin = lookFrom;
+        w = HMM_FastNormalize(lookFrom - lookAt);
+        u = HMM_FastNormalize(HMM_Cross(vup, w));
+        v = HMM_Cross(w, u);
+        lowerLeftCorner = origin - halfWidth*u - halfHeight*v - w;
+        horizontal = 2*halfWidth*u;
+        vertical = 2*halfHeight*v;
     }
 
     Ray getRay(f32 u, f32 v) {
-        Ray ray = Ray(origin, lowerLeftCorner + u*horizontal + v*vertical);
+        Ray ray = Ray(origin, lowerLeftCorner + u*horizontal + v*vertical - origin);
         return ray;
     }
 };
-static Camera camera;
+static Camera camera(vec3(-2,2,1), vec3(0,0,-1), vec3(0,1,0), 30, float(WIDTH)/float(HEIGHT));
 
 static Color
 calcColor(Ray& ray, Hittable* world, i32 depth) {
