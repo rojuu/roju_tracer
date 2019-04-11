@@ -2,7 +2,7 @@
 A ray tracing thing with the help of [Ray Tracing in a Weekend](http://www.realtimerendering.com/raytracing/Ray%20Tracing%20in%20a%20Weekend.pdf).
 
 ## Render result
-![alt text](render.png "Logo Title Text 1")
+![alt text](render.png "Render png")
 
 ## Compiling
 Just compile `src/main.cpp` and link against the SDL2 library. Make sure you have C/C++ runtime libraries on your system as well.
@@ -11,7 +11,7 @@ Just compile `src/main.cpp` and link against the SDL2 library. Make sure you hav
 You should be able to just use the Makefile on Linux.
 
 ### Mac
-You should be able to use the Makefile if you have installed SDL2 using homebrew.
+You should be able to use the Makefile if you have for example installed SDL2 using homebrew.
 
 ### Windows
 The build.bat file might work on windows, but hasn't been tested in a while. Just point %SDL2% to your SDL2 library folder, or install SDL2 in way your compiler can find it.
