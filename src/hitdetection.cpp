@@ -2,6 +2,7 @@ struct Ray {
     Vec3 o;
     Vec3 d;
 
+    Ray() {}
     Ray(Vec3 o, Vec3 d) : o(o), d(d) { }
 
     Vec3 t(float t) const {
@@ -9,10 +10,13 @@ struct Ray {
     }
 };
 
+struct Material;
+
 struct HitInfo {
     f32 t;
     Vec3 point;
     Vec3 normal;
+    Material *material;
 };
 
 struct Hittable {
@@ -22,15 +26,20 @@ struct Hittable {
 struct Sphere : public Hittable {
     Vec3 center;
     f32 radius;
+    Material* material;
 
     Sphere() { }
-    Sphere(Vec3 center, f32 radius)
-        : center(center), radius(radius)
+    Sphere(Vec3 center, f32 radius, Material* material)
+        : center(center),
+          radius(radius),
+          material(material)
     {
     }
 
     virtual bool
     hit(const Ray& ray, f32 tMin, f32 tMax, HitInfo& info) const {
+        info.material = material;
+
         Vec3 oc = ray.o - center;
         f32 a = HMM_Dot(ray.d, ray.d);
         f32 b = HMM_Dot(oc, ray.d);

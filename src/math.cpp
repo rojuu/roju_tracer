@@ -14,10 +14,16 @@ struct _Random {
 };
 static _Random Random;
 
-Vec3 randomInUnitSphere() {
+static Vec3
+randomInUnitSphere() {
     Vec3 p;
     do {
         p = 2.0*vec3(Random.next(), Random.next(), Random.next()) - vec3(1,1,1);
     } while(HMM_LengthSquared(p) >= 1.0);
     return p;
+}
+
+static Vec3
+reflect(const Vec3& a, const Vec3& b) {
+    return a - 2*HMM_Dot(a,b)*b;
 }
