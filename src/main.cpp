@@ -14,7 +14,30 @@
 #include "config.cpp"
 #include "types.cpp"
 #include "math.cpp"
-#include "renderdata.cpp"
+#include "hitdetection.cpp"
+
+struct Camera {
+    Vec3 lowerLeftCorner;
+    Vec3 horizontal;
+    Vec3 vertical;
+    Vec3 origin;
+
+    Camera() {
+        f32 w = (f32)WIDTH  / 100.f;
+        f32 h = (f32)HEIGHT / 100.f;
+
+        lowerLeftCorner = vec3(-w, -h, -1);
+        horizontal = vec3( w*2, 0, 0);
+        vertical = vec3(0, h*2, 0);
+        origin = vec3(0, 0, 0);
+    }
+
+    Ray getRay(f32 u, f32 v) {
+        Ray ray = Ray(origin, lowerLeftCorner + u*horizontal + v*vertical);
+        return ray;
+    }
+};
+static Camera camera;
 
 static Color
 colorFromRay(Ray& ray, Hittable* world) {
