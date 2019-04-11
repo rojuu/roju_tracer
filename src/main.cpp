@@ -11,25 +11,10 @@
 #include "stb_image_write.cpp"
 #include "pcg_random.hpp"
 
-#include "config.h"
-#include "types.h"
-#include "hittables.h"
-
-struct _Random {
-    pcg32 rng;
-    std::uniform_real_distribution<f32> dist;
-
-    _Random() {
-        pcg_extras::seed_seq_from<std::random_device> seed_source;
-        rng = pcg32(seed_source);
-        dist = std::uniform_real_distribution<f32>(0, 1);
-    }
-
-    f32 next() {
-        return dist(rng);
-    }
-};
-static _Random Random;
+#include "config.cpp"
+#include "types.cpp"
+#include "math.cpp"
+#include "hittables.cpp"
 
 struct Camera {
     Vec3 lowerLeftCorner;
@@ -57,8 +42,10 @@ static Camera camera;
 static Color
 colorFromRay(Ray& ray, Hittable* world) {
     HitInfo info;
-    if (world->hit(ray, 0, MAXFLOAT, info)) {
-        return 0.5f*vec3(info.normal.x+1, info.normal.y+1, info.normal.z+1);
+    if (world->hit(ray, 0.001, MAXFLOAT, info)) {
+        Vec3 target = info.point + info.normal + randomInUnitSphere();
+        Ray ray = Ray(info.point, target-info.point);
+        return 0.5f*colorFromRay(ray, world);
     } else {
         Vec3 unitDirection = HMM_FastNormalize(ray.d);
         f32 t = 0.5f * (unitDirection.y + 1.0f);
@@ -69,7 +56,6 @@ colorFromRay(Ray& ray, Hittable* world) {
 static void
 renderPixels(Color32* pixels) {
     memset(pixels, 0, sizeof(Color32) * WIDTH * HEIGHT);
-
 
     Hittable* list[2];
     list[0] = new Sphere(vec3(0,0,-1), 0.5);
@@ -88,6 +74,7 @@ renderPixels(Color32* pixels) {
                 color += colorFromRay(r, world);
             }
             color /= (f32)SUBSTEPS;
+            color = vec3(sqrt(color.r), sqrt(color.g), sqrt(color.b));
             setPixelColor(pixels, x, y, color);
         }
     }
