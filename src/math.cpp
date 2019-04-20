@@ -24,6 +24,15 @@ randomInUnitSphere() {
 }
 
 static Vec3
+randomInUnitDisk() {
+    Vec3 p;
+    do {
+        p = 2.0*vec3(Random.next(), Random.next(), 0) - vec3(1,1,0);
+    } while(HMM_Dot(p,p) >= 1.0);
+    return p;
+}
+
+static Vec3
 reflect(const Vec3& v, const Vec3& n) {
     return v - 2*HMM_Dot(v,n)*n;
 }

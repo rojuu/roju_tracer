@@ -1,5 +1,5 @@
-const int WIDTH  = 200;
-const int HEIGHT = 100;
-const int WINDOW_SCALE = 3;
-const int SUBSTEPS = 100;
+const int WIDTH  = 800;
+const int HEIGHT = 600;
+const int WINDOW_SCALE = 1;
+const int SUBSTEPS = 20;
 const int TRACING_MAX_DEPTH = 50;

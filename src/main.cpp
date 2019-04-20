@@ -1,12 +1,11 @@
 #include <stdio.h>
-#include <SDL2/SDL.h>
-
+#include <math.h>
 #include <atomic>
 #include <random>
-#include <math.h>
-
-#include <assert.h>
 #include <cstring>
+#include <assert.h>
+
+#include <SDL2/SDL.h>
 
 #include "HandmadeMath.cpp"
 #include "stb_image_write.cpp"
@@ -23,9 +22,11 @@ struct Camera {
     Vec3 horizontal;
     Vec3 vertical;
     Vec3 origin;
+    Vec3 u, v, w;
+    f32 lensRadius;
 
-    Camera(Vec3 lookFrom, Vec3 lookAt, Vec3 vup, f32 vfov, f32 aspect) {
-        Vec3 u, v, w;
+    Camera(Vec3 lookFrom, Vec3 lookAt, Vec3 vup, f32 vfov, f32 aspect, f32 aperture, f32 focusDist) {
+        lensRadius = aperture / 2;
         f32 theta = vfov*M_PI/180;
         f32 halfHeight = tan(theta/2);
         f32 halfWidth = aspect * halfHeight;
@@ -33,17 +34,18 @@ struct Camera {
         w = HMM_FastNormalize(lookFrom - lookAt);
         u = HMM_FastNormalize(HMM_Cross(vup, w));
         v = HMM_Cross(w, u);
-        lowerLeftCorner = origin - halfWidth*u - halfHeight*v - w;
-        horizontal = 2*halfWidth*u;
-        vertical = 2*halfHeight*v;
+        lowerLeftCorner = origin - halfWidth*focusDist*u - halfHeight*focusDist*v - focusDist*w;
+        horizontal = 2*halfWidth*focusDist*u;
+        vertical = 2*halfHeight*focusDist*v;
     }
 
-    Ray getRay(f32 u, f32 v) {
-        Ray ray = Ray(origin, lowerLeftCorner + u*horizontal + v*vertical - origin);
+    Ray getRay(f32 s, f32 t) {
+        Vec3 rd = lensRadius * randomInUnitDisk();
+        Vec3 offset = u * rd.x + v * rd.y;
+        Ray ray = Ray(origin + offset, lowerLeftCorner + s*horizontal + t*vertical - origin - offset);
         return ray;
     }
 };
-static Camera camera(vec3(-2,2,1), vec3(0,0,-1), vec3(0,1,0), 30, float(WIDTH)/float(HEIGHT));
 
 static Color
 calcColor(Ray& ray, Hittable* world, i32 depth) {
@@ -63,18 +65,46 @@ calcColor(Ray& ray, Hittable* world, i32 depth) {
     }
 }
 
+static Hittable*
+randomScene() {
+    int n = 500;
+    Hittable** list = new Hittable* [n+1];
+    list[0] = new Sphere(vec3(0,-1000,0), 1000, new Lambertian(vec3(0.5, 0.5, 0.5)));
+    int i = 1;
+    for (int a = -11; a < 11; a++) {
+        for (int b = -11; b < 11; b++) {
+            float chooseMat = Random.next();
+            Vec3 center = vec3(a+0.9*Random.next(), 0.2, b+0.9*Random.next());
+            if (HMM_Length(center-vec3(4,0.2,0)) > 0.9) {
+                if (chooseMat < 0.8) { //diffuse
+                    list[i++] = new Sphere(center, 0.2, new Lambertian(vec3(Random.next()*Random.next(), Random.next()*Random.next(), Random.next()*Random.next())));
+                } else if (chooseMat < 0.95) { //metal
+                    list[i++] = new Sphere(center, 0.2, new Metal(vec3(0.5*(1 + Random.next()), 0.5*(1+ Random.next()), 0.5*(1+ Random.next())), 0.5*Random.next()));
+                } else { //glass
+                    list[i++] = new Sphere(center, 0.2, new Dielectric(1.5));
+                }
+            }
+        }
+    }
+end:
+    list[i++] = new Sphere(vec3(0, 1, 0), 1.0, new Dielectric(1.5));
+    list[i++] = new Sphere(vec3(-4, 1, 0), 1.0, new Lambertian(vec3(0.4, 0.2, 0.1)));
+    list[i++] = new Sphere(vec3(4, 1, 0), 1.0, new Metal(vec3(0.7, 0.6, 0.5), 0.0));
+
+    return new HittableList(list, i);
+}
+
 static void
 renderPixels(Color32* pixels) {
     memset(pixels, 0, sizeof(Color32) * WIDTH * HEIGHT);
 
-    const size_t lc=5;
-    Hittable* list[lc];
-    list[0] = new Sphere(vec3(0,0,-1), 0.5, new Lambertian(vec3(0.1, 0.2, 0.5)));
-    list[1] = new Sphere(vec3(0,-100.5, -1), 100, new Lambertian(vec3(0.8, 0.8, 0.0)));
-    list[2] = new Sphere(vec3(1, 0, -1), 0.5, new Metal(vec3(0.8, 0.6, 0.2), 0.3));
-    list[3] = new Sphere(vec3(-1, 0, -1), 0.5, new Dielectric(1.5));
-    list[4] = new Sphere(vec3(-1, 0, -1), -0.45, new Dielectric(1.5));
-    Hittable* world = new HittableList(list, lc);
+    Vec3 lookFrom = vec3(13,2,3);
+    Vec3 lookAt = vec3(0,0,0);
+    f32 distToFocus = 10;
+    f32 aperture = 0.1;
+    Camera camera(lookFrom, lookAt, vec3(0,1,0), 20, float(WIDTH)/float(HEIGHT), aperture, distToFocus);
+
+    Hittable* world = randomScene();
 
     for (i32 y = 0; y < HEIGHT; y++) {
         for (i32 x = 0; x < WIDTH; x++) {
