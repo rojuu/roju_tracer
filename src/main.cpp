@@ -5,6 +5,10 @@
 #include <cstring>
 #include <assert.h>
 #include <thread>
+#include <mutex>
+#include <queue>
+#include <algorithm>
+#include <utility>
 
 #include <SDL2/SDL.h>
 
@@ -46,6 +50,69 @@ struct Camera {
         Ray ray = Ray(origin + offset, lowerLeftCorner + s*horizontal + t*vertical - origin - offset);
         return ray;
     }
+};
+
+template <typename T>
+struct SafeQueue {
+    std::queue<T> queue;
+    std::mutex mutex;
+
+    SafeQueue() {
+        queue = std::queue<T>();
+    }
+
+    T front() {
+        std::lock_guard<std::mutex> m(mutex);
+        return queue.front();
+    }
+
+    T back() {
+        std::lock_guard<std::mutex> m(mutex);
+        return queue.back();
+    }
+
+    bool empty() {
+       return queue.empty();
+    }
+
+    size_t size() {
+        std::lock_guard<std::mutex> m(mutex);
+        return queue.size();
+    }
+
+    void unsafePush(T e) {
+        queue.push(e);
+    }
+
+    void push(T e) {
+        std::lock_guard<std::mutex> m(mutex);
+        queue.push(e);
+    }
+
+    void clear() {
+        std::lock_guard<std::mutex> m(mutex);
+        queue = std::queue<T>();
+    }
+
+    bool pop(T* out = nullptr) {
+        std::lock_guard<std::mutex> m(mutex);
+        if (queue.empty()) {
+            return false;
+        }
+        if (out != nullptr) {
+            *out = queue.front();
+        }
+        queue.pop();
+        return true;
+    }
+};
+
+struct RenderJob {
+    Color32* pixels;
+    Camera* camera;
+    Hittable* world;
+    i32 x, y;
+    i32 width, height;
 };
 
 static Color
@@ -96,6 +163,38 @@ end:
 }
 
 static void
+renderPartFromJob(const RenderJob& job) {
+    auto h = job.y+job.height;
+    auto w = job.x+job.width;
+    for (i32 y = job.y; y < h; y++) {
+        for (i32 x = job.x; x < w; x++) {
+            Vec3 color = vec3(0,0,0);
+            for (i32 s = 0; s < SUBSTEPS; s++) {
+                f32 u =       ((f32)x + Random.next()) / (f32)WIDTH;
+                f32 v = 1.0 - ((f32)y + Random.next()) / (f32)HEIGHT; // Flipping the V so we go from bottom to top
+
+                Ray r = job.camera->getRay(u, v);
+                color += calcColor(r, job.world, 0);
+            }
+            color /= (f32)SUBSTEPS;
+            color = vec3(sqrt(color.r), sqrt(color.g), sqrt(color.b));
+            setPixelColor(job.pixels, x, y, color);
+        }
+    }
+}
+
+static SafeQueue<RenderJob> gRenderQueue;
+
+static void jobQueueRenderer() {
+    while(!gRenderQueue.empty()) {
+        RenderJob job;
+        if(gRenderQueue.pop(&job)) {
+            renderPartFromJob(job);
+        }
+    }
+}
+
+static void
 renderPixels(Color32* pixels) {
     memset(pixels, 0, sizeof(Color32) * WIDTH * HEIGHT);
 
@@ -107,20 +206,42 @@ renderPixels(Color32* pixels) {
 
     Hittable* world = randomScene();
 
-    for (i32 y = 0; y < HEIGHT; y++) {
-        for (i32 x = 0; x < WIDTH; x++) {
-            Vec3 color = vec3(0,0,0);
-            for (i32 s = 0; s < SUBSTEPS; s++) {
-                f32 u =       ((f32)x + Random.next()) / (f32)WIDTH;
-                f32 v = 1.0 - ((f32)y + Random.next()) / (f32)HEIGHT; // Flipping the V so we go from bottom to top
+    gRenderQueue.clear();
 
-                Ray r = camera.getRay(u, v);
-                color += calcColor(r, world, 0);
-            }
-            color /= (f32)SUBSTEPS;
-            color = vec3(sqrt(color.r), sqrt(color.g), sqrt(color.b));
-            setPixelColor(pixels, x, y, color);
+    int x = 0;
+    int y = 0;
+
+    // Calculate tiles and make them into render jobs
+    while(y < HEIGHT) {
+        int h = TILE_HEIGHT;
+        h = h + y >= HEIGHT ? HEIGHT - y : h;
+        while(x < WIDTH) {
+            int w = TILE_WIDTH;
+            w = w + x >= WIDTH ? WIDTH - x : w;
+            gRenderQueue.unsafePush({
+                pixels,
+                &camera,
+                world,
+                x,
+                y,
+                w,
+                h,
+            });
+            x+=TILE_WIDTH;
         }
+        x = 0;
+        y+=TILE_HEIGHT;
+    }
+
+    auto nThreads = std::thread::hardware_concurrency();
+    auto threads = std::vector<std::thread>();
+    threads.reserve(nThreads);
+    for (int i = 0; i < nThreads; i++) {
+        threads.emplace_back(jobQueueRenderer);
+    }
+
+    for (int i = 0; i < threads.size(); i++) {
+        threads[i].join();
     }
 }
 
@@ -129,13 +250,13 @@ savePixels(Color32* pixels) {
     stbi_write_png("render.png", WIDTH, HEIGHT, 4, pixels, WIDTH*sizeof(Color32));
 }
 
-static std::atomic<bool> gRenderAndSaveDone;
+static std::atomic<bool> gAtomicRenderAndSaveDone;
 static void
 renderAndSave(Color32* pixels) {
-    gRenderAndSaveDone = false;
+    gAtomicRenderAndSaveDone = false;
     renderPixels(pixels);
     savePixels(pixels);
-    gRenderAndSaveDone = true;
+    gAtomicRenderAndSaveDone = true;
 }
 
 int
@@ -171,9 +292,15 @@ main(int argc, char** argv) {
 
     Color32* pixels = (Color32*)calloc(WIDTH * HEIGHT, sizeof(Color32));
 
-    std::thread backgroundThread(renderAndSave, pixels);
+#define START_WITH_SPACE 1
 
-    bool expectedRenderAndSaveState = !gRenderAndSaveDone;
+#if START_WITH_SPACE
+    std::thread backgroundThread;
+#else
+    std::thread backgroundThread = std::thread(renderAndSave, pixels);
+#endif
+
+    bool expectedRenderAndSaveState = !gAtomicRenderAndSaveDone;
 
     b32 running = true;
     while (running) {
@@ -194,11 +321,23 @@ main(int argc, char** argv) {
                     }
                     break;
                 }
+
+
+#if START_WITH_SPACE
+                case SDL_KEYUP: {
+                    switch (event.key.keysym.sym) {
+                        case SDLK_SPACE: {
+                            backgroundThread = std::thread(renderAndSave, pixels);
+                            break;
+                        }
+                    }
+                }
+#endif
             }
         }
 
-        if (expectedRenderAndSaveState != gRenderAndSaveDone) {
-            expectedRenderAndSaveState = gRenderAndSaveDone;
+        if (expectedRenderAndSaveState != gAtomicRenderAndSaveDone) {
+            expectedRenderAndSaveState = gAtomicRenderAndSaveDone;
             if(expectedRenderAndSaveState) {
                 SDL_SetWindowTitle(window, "Done rendering");
             } else {
