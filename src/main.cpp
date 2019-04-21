@@ -4,6 +4,7 @@
 #include <random>
 #include <cstring>
 #include <assert.h>
+#include <thread>
 
 #include <SDL2/SDL.h>
 
@@ -128,15 +129,13 @@ savePixels(Color32* pixels) {
     stbi_write_png("render.png", WIDTH, HEIGHT, 4, pixels, WIDTH*sizeof(Color32));
 }
 
-static std::atomic<bool> gBackgroundThreadDone;
-
-int
-backgroundRenderAndSaveThread(void* data) {
-    Color32* pixels = (Color32*)data;
+static std::atomic<bool> gRenderAndSaveDone;
+static void
+renderAndSave(Color32* pixels) {
+    gRenderAndSaveDone = false;
     renderPixels(pixels);
     savePixels(pixels);
-    gBackgroundThreadDone = true;
-    return 0;
+    gRenderAndSaveDone = true;
 }
 
 int
@@ -172,10 +171,9 @@ main(int argc, char** argv) {
 
     Color32* pixels = (Color32*)calloc(WIDTH * HEIGHT, sizeof(Color32));
 
-    gBackgroundThreadDone = false;
-    SDL_Thread* backgroundThread = SDL_CreateThread(backgroundRenderAndSaveThread, "backgroundRenderAndSaveThread", (void *)pixels);
+    std::thread backgroundThread(renderAndSave, pixels);
 
-    bool backgroundThreadExpectedState = !gBackgroundThreadDone;
+    bool expectedRenderAndSaveState = !gRenderAndSaveDone;
 
     b32 running = true;
     while (running) {
@@ -199,9 +197,9 @@ main(int argc, char** argv) {
             }
         }
 
-        if (backgroundThreadExpectedState != gBackgroundThreadDone) {
-            backgroundThreadExpectedState = gBackgroundThreadDone;
-            if(backgroundThreadExpectedState) {
+        if (expectedRenderAndSaveState != gRenderAndSaveDone) {
+            expectedRenderAndSaveState = gRenderAndSaveDone;
+            if(expectedRenderAndSaveState) {
                 SDL_SetWindowTitle(window, "Done rendering");
             } else {
                 SDL_SetWindowTitle(window, "Rendering...");
