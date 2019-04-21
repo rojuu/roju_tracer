@@ -5,4 +5,4 @@ const int TILE_HEIGHT = 60;
 
 const int WINDOW_SCALE = 1;
 const int SUBSTEPS = 20;
-const int TRACING_MAX_DEPTH = 50;
+const int TRACING_MAX_DEPTH = 10;

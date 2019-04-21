@@ -292,7 +292,7 @@ main(int argc, char** argv) {
 
     Color32* pixels = (Color32*)calloc(WIDTH * HEIGHT, sizeof(Color32));
 
-#define START_WITH_SPACE 1
+#define START_WITH_SPACE 0
 
 #if START_WITH_SPACE
     std::thread backgroundThread;
