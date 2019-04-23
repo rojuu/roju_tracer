@@ -215,7 +215,7 @@ renderPixels(Color32* pixels) {
     for (int i = 1; i <= renderCount; i++) {
         memset(pixels, 0, sizeof(Color32) * WIDTH * HEIGHT);
 
-        auto iStart = std::chrono::high_resolution_clock::now();
+        auto loopStart = std::chrono::high_resolution_clock::now();
 
 #if 1 // enable render jobs
         gRenderQueue.clear();
@@ -268,9 +268,9 @@ renderPixels(Color32* pixels) {
         renderPartFromJob(job);
 #endif
 
-        auto iEnd = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> diff = iEnd-iStart;
-        std::cout << "Time of one render " << i << ": " << diff.count() << " s\n";
+        auto loopEnd = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> loopDiff = loopEnd-loopStart;
+        std::cout << "Time of one render " << i << ": " << loopDiff.count() << " s\n";
     } // END for renderCount
 
     auto end = std::chrono::high_resolution_clock::now();
