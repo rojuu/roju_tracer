@@ -9,6 +9,8 @@
 #include <queue>
 #include <algorithm>
 #include <utility>
+#include <iostream>
+#include <chrono>
 
 #include <SDL2/SDL.h>
 
@@ -210,7 +212,7 @@ renderPixels(Color32* pixels) {
 
     Hittable* world = randomScene();
 
-#if 1 //Enable render jobs
+#if 0 // Normal use with render jobs, otherwise profiling
     gRenderQueue.clear();
 
     int x = 0;
@@ -257,7 +259,24 @@ renderPixels(Color32* pixels) {
     job.y = 0;
     job.width = WIDTH;
     job.height = HEIGHT;
-    renderPartFromJob(job);
+
+    const int runCount = 5;
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int i = 1; i <= runCount; i++) {
+        memset(pixels, 0, sizeof(Color32) * WIDTH * HEIGHT);
+        auto iStart = std::chrono::high_resolution_clock::now();
+
+        renderPartFromJob(job);
+
+        auto iEnd = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> diff = iEnd-iStart;
+        std::cout << "Time to do renderPartFromJob " << i << ": " << diff.count() << " s\n";
+    }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff = end-start;
+    auto average = diff.count() / runCount;
+    std::cout << "Average time to do renderPartFromJob: " << average << " s\n";
 #endif
 
 }

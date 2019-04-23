@@ -94,12 +94,21 @@ struct SphereList : public Hittable {
             tempInfo.material = sphere->material;
 
             Vec3 oc = ray.o - sphere->center;
-            f32 a = HMM_Dot(ray.d, ray.d);
-            f32 b = HMM_Dot(oc, ray.d);
-            f32 c = HMM_Dot(oc, oc) - sphere->radius*sphere->radius;
+
+            Vec3 rayD = ray.d;
+            f32 a = //dot(rayD, rayD)
+                ((rayD.x * rayD.x) + (rayD.y * rayD.y) + (rayD.z * rayD.z));
+            f32 b = //dot(oc, rayD)
+                ((oc.x * rayD.x) + (oc.y * rayD.y) + (oc.z * rayD.z));
+            f32 c = //dot(oc, oc) - r^2
+                ((oc.x * oc.x) + (oc.y * oc.y) + (oc.z * oc.z))
+                    - sphere->radius*sphere->radius;
+
             f32 discriminant = b*b - a*c;
             if (discriminant > 0) {
-                f32 temp = (-b - sqrt(b*b-a*c))/a;
+                f32 discSqrt = sqrt(discriminant);
+
+                f32 temp = (-b - discSqrt)/a;
                 if (temp < closestSoFar && temp > tMin) {
                     tempInfo.t = temp;
                     tempInfo.point = ray.t(tempInfo.t);
@@ -107,7 +116,7 @@ struct SphereList : public Hittable {
                     hit = true;
                     goto end;
                 }
-                temp = (-b + sqrt(b*b-a*c))/a;
+                temp = (-b + discSqrt)/a;
                 if (temp < closestSoFar && temp > tMin) {
                     tempInfo.t = temp;
                     tempInfo.point = ray.t(tempInfo.t);
