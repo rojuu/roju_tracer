@@ -136,7 +136,7 @@ calcColor(Ray& ray, Hittable* world, i32 depth) {
 static Hittable*
 randomScene() {
     int n = 500;
-    Hittable** list = new Hittable* [n+1];
+    Sphere** list = new Sphere* [n+1];
     list[0] = new Sphere(vec3(0,-1000,0), 1000, new Lambertian(vec3(0.5, 0.5, 0.5)));
     int i = 1;
     for (int a = -11; a < 11; a++) {
@@ -159,7 +159,11 @@ end:
     list[i++] = new Sphere(vec3(-4, 1, 0), 1.0, new Lambertian(vec3(0.4, 0.2, 0.1)));
     list[i++] = new Sphere(vec3(4, 1, 0), 1.0, new Metal(vec3(0.7, 0.6, 0.5), 0.0));
 
-    return new HittableList(list, i);
+    /*Hittable** sl = new Hittable* [1] {
+        new SphereList(list, i),
+    };
+    return new HittableList(sl, 1);*/
+    return new SphereList(list, i);
 }
 
 static void
@@ -206,6 +210,7 @@ renderPixels(Color32* pixels) {
 
     Hittable* world = randomScene();
 
+#if 1 //Enable render jobs
     gRenderQueue.clear();
 
     int x = 0;
@@ -243,6 +248,18 @@ renderPixels(Color32* pixels) {
     for (int i = 0; i < threads.size(); i++) {
         threads[i].join();
     }
+#else
+    RenderJob job;
+    job.pixels = pixels;
+    job.camera = &camera;
+    job.world = world;
+    job.x = 0;
+    job.y = 0;
+    job.width = WIDTH;
+    job.height = HEIGHT;
+    renderPartFromJob(job);
+#endif
+
 }
 
 static void

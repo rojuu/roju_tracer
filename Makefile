@@ -2,4 +2,4 @@ all: main
 
 main: src/main.cpp
 	mkdir -p bin
-	clang++ -g src/main.cpp -O3 -msse3 -lSDL2 -lpthread -o bin/roju_tracer
+	clang++ -Ofast -msse3 -std=c++11 -g src/main.cpp -lSDL2 -lpthread -o bin/roju_tracer
