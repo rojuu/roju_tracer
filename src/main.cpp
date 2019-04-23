@@ -265,7 +265,6 @@ renderPixels(Color32* pixels) {
         job.width = WIDTH;
         job.height = HEIGHT;
 
-
         renderPartFromJob(job);
 #endif
 
