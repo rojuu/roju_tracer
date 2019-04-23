@@ -202,8 +202,6 @@ static void jobQueueRenderer() {
 
 static void
 renderPixels(Color32* pixels) {
-    memset(pixels, 0, sizeof(Color32) * WIDTH * HEIGHT);
-
     Vec3 lookFrom = vec3(13,2,3);
     Vec3 lookAt = vec3(0,0,0);
     f32 distToFocus = 10;
@@ -212,73 +210,74 @@ renderPixels(Color32* pixels) {
 
     Hittable* world = randomScene();
 
-#if 0 // Normal use with render jobs, otherwise profiling
-    gRenderQueue.clear();
-
-    int x = 0;
-    int y = 0;
-
-    // Calculate tiles and make them into render jobs
-    while(y < HEIGHT) {
-        int h = TILE_HEIGHT;
-        h = h + y >= HEIGHT ? HEIGHT - y : h;
-        while(x < WIDTH) {
-            int w = TILE_WIDTH;
-            w = w + x >= WIDTH ? WIDTH - x : w;
-            gRenderQueue.unsafePush({
-                pixels,
-                &camera,
-                world,
-                x,
-                y,
-                w,
-                h,
-            });
-            x+=TILE_WIDTH;
-        }
-        x = 0;
-        y+=TILE_HEIGHT;
-    }
-
-    auto nThreads = std::thread::hardware_concurrency();
-    auto threads = std::vector<std::thread>();
-    threads.reserve(nThreads);
-    for (int i = 0; i < nThreads; i++) {
-        threads.emplace_back(jobQueueRenderer);
-    }
-
-    for (int i = 0; i < threads.size(); i++) {
-        threads[i].join();
-    }
-#else
-    RenderJob job;
-    job.pixels = pixels;
-    job.camera = &camera;
-    job.world = world;
-    job.x = 0;
-    job.y = 0;
-    job.width = WIDTH;
-    job.height = HEIGHT;
-
-    const int runCount = 5;
+    const int renderCount = 1;
     auto start = std::chrono::high_resolution_clock::now();
-    for (int i = 1; i <= runCount; i++) {
+    for (int i = 1; i <= renderCount; i++) {
         memset(pixels, 0, sizeof(Color32) * WIDTH * HEIGHT);
+
         auto iStart = std::chrono::high_resolution_clock::now();
 
+#if 1 // enable render jobs
+        gRenderQueue.clear();
+
+        int x = 0;
+        int y = 0;
+
+        // Calculate tiles and make them into render jobs
+        while(y < HEIGHT) {
+            int h = TILE_HEIGHT;
+            h = h + y >= HEIGHT ? HEIGHT - y : h;
+            while(x < WIDTH) {
+                int w = TILE_WIDTH;
+                w = w + x >= WIDTH ? WIDTH - x : w;
+                gRenderQueue.unsafePush({
+                    pixels,
+                    &camera,
+                    world,
+                    x,
+                    y,
+                    w,
+                    h,
+                });
+                x+=TILE_WIDTH;
+            }
+            x = 0;
+            y+=TILE_HEIGHT;
+        }
+
+        auto nThreads = std::thread::hardware_concurrency();
+        auto threads = std::vector<std::thread>();
+        threads.reserve(nThreads);
+        for (int i = 0; i < nThreads; i++) {
+            threads.emplace_back(jobQueueRenderer);
+        }
+
+        for (int i = 0; i < threads.size(); i++) {
+            threads[i].join();
+        }
+#else
+        RenderJob job;
+        job.pixels = pixels;
+        job.camera = &camera;
+        job.world = world;
+        job.x = 0;
+        job.y = 0;
+        job.width = WIDTH;
+        job.height = HEIGHT;
+
+
         renderPartFromJob(job);
+#endif
 
         auto iEnd = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> diff = iEnd-iStart;
-        std::cout << "Time to do renderPartFromJob " << i << ": " << diff.count() << " s\n";
-    }
+        std::cout << "Time of one render " << i << ": " << diff.count() << " s\n";
+    } // END for renderCount
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> diff = end-start;
-    auto average = diff.count() / runCount;
-    std::cout << "Average time to do renderPartFromJob: " << average << " s\n";
-#endif
-
+    auto average = diff.count() / renderCount;
+    std::cout << "Average time of " << renderCount << " render(s): " << average << " s\n";
 }
 
 static void
