@@ -1,9 +1,9 @@
-#include <stdio.h>
-#include <math.h>
+#include <cstdio>
+#include <cmath>
 #include <atomic>
 #include <random>
 #include <cstring>
-#include <assert.h>
+#include <cassert>
 #include <thread>
 #include <mutex>
 #include <queue>
@@ -212,7 +212,10 @@ renderPixels(Color32* pixels) {
 
     const int renderCount = 1;
     auto start = std::chrono::high_resolution_clock::now();
-    for (int i = 1; i <= renderCount; i++) {
+    for (int renderIndex = 1;
+         renderIndex <= renderCount;
+         renderIndex++) {
+
         memset(pixels, 0, sizeof(Color32) * WIDTH * HEIGHT);
 
         auto loopStart = std::chrono::high_resolution_clock::now();
@@ -270,7 +273,7 @@ renderPixels(Color32* pixels) {
 
         auto loopEnd = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> loopDiff = loopEnd-loopStart;
-        std::cout << "Time of one render " << i << ": " << loopDiff.count() << " s\n";
+        std::cout << "Time of one render " << renderIndex << ": " << loopDiff.count() << " s\n";
     } // END for renderCount
 
     auto end = std::chrono::high_resolution_clock::now();

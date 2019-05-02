@@ -8,7 +8,7 @@ struct Material {
 struct Lambertian : public Material {
     Color albedo;
 
-    Lambertian(const Vec3& albedo) : albedo(albedo) {}
+    Lambertian(const Color& albedo) : albedo(albedo) {}
 
     virtual bool scatter(const Ray& rIn,
                          const HitInfo& info,
