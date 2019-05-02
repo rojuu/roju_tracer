@@ -40,6 +40,7 @@ struct Sphere : public Hittable {
     hit(const Ray& ray, f32 tMin, f32 tMax, HitInfo& info) const {
         printf("All spheres should be in a SphereList");
         assert(false);
+        return false;
     }
 };
 
