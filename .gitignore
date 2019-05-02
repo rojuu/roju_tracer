@@ -1,4 +1,7 @@
 .vscode/
+.idea/
+cmake*
 bin
+build
 .kdev4
 *.kdev4
