@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 
 project(roju_tracer)
 
-find_package (Threads)
+find_package(Threads REQUIRED)
 find_package(SDL2 REQUIRED)
 
 include_directories(${SDL2_INCLUDE_DIRS})

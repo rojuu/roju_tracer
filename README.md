@@ -5,7 +5,7 @@ A ray tracing thing with the help of [Ray Tracing in a Weekend](http://www.realt
 ![alt text](render.png "Render png")
 
 ## Compiling
-This project uses [CMake](https://cmake.org/) for generating projects or makefiles for each platform.
+This project uses [CMake](https://cmake.org/) for generating projects or makefiles for each platform. Currently only tested on Linux (Manjaro), but should in theory work on Windows and OSX as well.
 
 ## Dependencies
 You need to link against these.
