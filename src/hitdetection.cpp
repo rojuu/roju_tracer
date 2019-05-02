@@ -2,7 +2,7 @@ struct Ray {
     Vec3 o;
     Vec3 d;
 
-    Ray() {}
+    Ray() = default;
     Ray(Vec3 o, Vec3 d) : o(o), d(d) { }
 
     Vec3 t(float t) const {
@@ -23,52 +23,17 @@ struct Hittable {
     virtual bool hit(const Ray& ray, f32 tMin, f32 tMax, HitInfo& info) const = 0;
 };
 
-struct Sphere : public Hittable {
+struct Sphere {
     Vec3 center;
     f32 radius;
     Material* material;
 
-    Sphere() { }
+    Sphere() = default;
     Sphere(Vec3 center, f32 radius, Material* material)
         : center(center),
           radius(radius),
           material(material)
     {
-    }
-
-    virtual bool
-    hit(const Ray& ray, f32 tMin, f32 tMax, HitInfo& info) const {
-        printf("All spheres should be in a SphereList");
-        assert(false);
-        return false;
-    }
-};
-
-struct HittableList : public Hittable {
-    Hittable** list;
-    size_t listSize;
-
-    HittableList() { }
-    HittableList(Hittable** _list, size_t size)
-    {
-        list = _list;
-        listSize = size;
-    }
-
-    virtual bool
-    hit(const Ray& ray, f32 tMin, f32 tMax, HitInfo& info) const {
-        HitInfo tempInfo;
-        bool hitSomething = false;
-        f64 closestSoFar = tMax;
-        for (int i = 0; i < listSize; i++) {
-            auto hittable = list[i];
-            if (hittable->hit(ray, tMin, closestSoFar, tempInfo)) {
-                hitSomething = true;
-                closestSoFar = tempInfo.t;
-                info = tempInfo;
-            }
-        }
-        return hitSomething;
     }
 };
 
@@ -76,7 +41,7 @@ struct SphereList : public Hittable {
     Sphere** list;
     size_t listSize;
 
-    SphereList() { }
+    SphereList() = default;
     SphereList(Sphere** _list, size_t size)
     {
         list = _list;
