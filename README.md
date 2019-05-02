@@ -8,11 +8,10 @@ A ray tracing thing with the help of [Ray Tracing in a Weekend](http://www.realt
 This project uses [CMake](https://cmake.org/) for generating projects or makefiles for each platform. Currently only tested on Linux (Manjaro), but should in theory work on Windows and OSX as well.
 
 ## Dependencies
-You need to link against these.
-- [SDL2](http://libsdl.org/)
+- [SDL2](http://libsdl.org/) cmake will automatically build this from source (included in deps folder)
 - C/C++ runtime libraries
 
-Single-ish header libraries, so doesn't need linking, or any action really. These are all already included in the main.cpp
+Following are single-ish header libraries, so they don't require any specific actions really. These are all already included in the main.cpp
 - [HandmadeMath](https://github.com/HandmadeMath/Handmade-Math)
 - [stb_image_write](https://github.com/nothings/stb)
 - [PCG Random Number Generator C++ library](https://github.com/imneme/pcg-cpp)
