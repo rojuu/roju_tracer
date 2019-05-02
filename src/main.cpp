@@ -359,7 +359,6 @@ main(int argc, char** argv) {
                     break;
                 }
 
-
 #if START_WITH_SPACE
                 case SDL_KEYUP: {
                     switch (event.key.keysym.sym) {
