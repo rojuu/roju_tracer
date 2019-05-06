@@ -30,26 +30,26 @@ struct Camera {
     Vec3 vertical;
     Vec3 origin;
     Vec3 u, v, w;
-    f32  lensRadius;
+    f32 lensRadius;
 
     Camera(Vec3 lookFrom, Vec3 lookAt, Vec3 vup, f32 vfov, f32 aspect, f32 aperture, f32 focusDist) {
-        lensRadius      = aperture / 2;
-        f32 theta       = vfov * M_PI / 180;
-        f32 halfHeight  = tan(theta / 2);
-        f32 halfWidth   = aspect * halfHeight;
-        origin          = lookFrom;
-        w               = HMM_FastNormalize(lookFrom - lookAt);
-        u               = HMM_FastNormalize(HMM_Cross(vup, w));
-        v               = HMM_Cross(w, u);
+        lensRadius = aperture / 2;
+        f32 theta = vfov * M_PI / 180;
+        f32 halfHeight = tan(theta / 2);
+        f32 halfWidth = aspect * halfHeight;
+        origin = lookFrom;
+        w = HMM_FastNormalize(lookFrom - lookAt);
+        u = HMM_FastNormalize(HMM_Cross(vup, w));
+        v = HMM_Cross(w, u);
         lowerLeftCorner = origin - halfWidth * focusDist * u - halfHeight * focusDist * v - focusDist * w;
-        horizontal      = 2 * halfWidth * focusDist * u;
-        vertical        = 2 * halfHeight * focusDist * v;
+        horizontal = 2 * halfWidth * focusDist * u;
+        vertical = 2 * halfHeight * focusDist * v;
     }
 
     Ray getRay(f32 s, f32 t) {
-        Vec3 rd     = lensRadius * randomInUnitDisk();
+        Vec3 rd = lensRadius * randomInUnitDisk();
         Vec3 offset = u * rd.x + v * rd.y;
-        Ray  ray    = Ray(origin + offset, lowerLeftCorner + s * horizontal + t * vertical - origin - offset);
+        Ray ray = Ray(origin + offset, lowerLeftCorner + s * horizontal + t * vertical - origin - offset);
         return ray;
     }
 };
@@ -57,7 +57,7 @@ struct Camera {
 template <typename T>
 struct SafeQueue {
     std::queue<T> queue;
-    std::mutex    mutex;
+    std::mutex mutex;
 
     SafeQueue() {
         queue = std::queue<T>();
@@ -110,17 +110,17 @@ struct SafeQueue {
 };
 
 struct RenderJob {
-    Color32*  pixels;
-    Camera*   camera;
+    Color32* pixels;
+    Camera* camera;
     Hittable* world;
-    i32       x, y;
-    i32       width, height;
+    i32 x, y;
+    i32 width, height;
 };
 
 static Color calcColor(Ray& ray, Hittable* world, i32 depth) {
     HitInfo info;
     if (world->hit(ray, 0.001, MAXFLOAT, info)) {
-        Ray  scattered;
+        Ray scattered;
         Vec3 attenuation;
         if (depth < TRACING_MAX_DEPTH && info.material->scatter(ray, info, attenuation, scattered)) {
             return attenuation * calcColor(scattered, world, depth + 1);
@@ -129,20 +129,20 @@ static Color calcColor(Ray& ray, Hittable* world, i32 depth) {
         }
     } else {
         Vec3 unitDirection = HMM_FastNormalize(ray.d);
-        f32  t             = 0.5f * (unitDirection.y + 1.0f);
+        f32 t = 0.5f * (unitDirection.y + 1.0f);
         return (1.0f - t) * vec3(1.0f, 1.0f, 1.0f) + t * vec3(0.5f, 0.7f, 1.0f);
     }
 }
 
 static Hittable* randomScene() {
-    int      n    = 500;
+    int n = 500;
     Sphere** list = new Sphere*[n + 1];
-    list[0]       = new Sphere(vec3(0, -1000, 0), 1000, new Lambertian(vec3(0.5, 0.5, 0.5)));
-    int i         = 1;
+    list[0] = new Sphere(vec3(0, -1000, 0), 1000, new Lambertian(vec3(0.5, 0.5, 0.5)));
+    int i = 1;
     for (int a = -11; a < 11; a++) {
         for (int b = -11; b < 11; b++) {
             float chooseMat = Random.next();
-            Vec3  center    = vec3(a + 0.9 * Random.next(), 0.2, b + 0.9 * Random.next());
+            Vec3 center = vec3(a + 0.9 * Random.next(), 0.2, b + 0.9 * Random.next());
             if (HMM_Length(center - vec3(4, 0.2, 0)) > 0.9) {
                 if (chooseMat < 0.8) { // diffuse
                     list[i++] =
@@ -204,16 +204,16 @@ static void jobQueueRenderer() {
 }
 
 static void renderPixels(Color32* pixels) {
-    Vec3   lookFrom    = vec3(13, 2, 3);
-    Vec3   lookAt      = vec3(0, 0, 0);
-    f32    distToFocus = 10;
-    f32    aperture    = 0.1;
+    Vec3 lookFrom = vec3(13, 2, 3);
+    Vec3 lookAt = vec3(0, 0, 0);
+    f32 distToFocus = 10;
+    f32 aperture = 0.1;
     Camera camera(lookFrom, lookAt, vec3(0, 1, 0), 20, float(WIDTH) / float(HEIGHT), aperture, distToFocus);
 
     Hittable* world = randomScene();
 
     const int renderCount = 1;
-    auto      start       = std::chrono::high_resolution_clock::now();
+    auto start = std::chrono::high_resolution_clock::now();
     for (int renderIndex = 1; renderIndex <= renderCount; renderIndex++) {
 
         memset(pixels, 0, sizeof(Color32) * WIDTH * HEIGHT);
@@ -229,10 +229,10 @@ static void renderPixels(Color32* pixels) {
         // Calculate tiles and make them into render jobs
         while (y < HEIGHT) {
             int h = TILE_HEIGHT;
-            h     = h + y >= HEIGHT ? HEIGHT - y : h;
+            h = h + y >= HEIGHT ? HEIGHT - y : h;
             while (x < WIDTH) {
                 int w = TILE_WIDTH;
-                w     = w + x >= WIDTH ? WIDTH - x : w;
+                w = w + x >= WIDTH ? WIDTH - x : w;
                 gRenderQueue.unsafePush({
                     pixels,
                     &camera,
@@ -249,7 +249,7 @@ static void renderPixels(Color32* pixels) {
         }
 
         auto nThreads = std::thread::hardware_concurrency();
-        auto threads  = std::vector<std::thread>();
+        auto threads = std::vector<std::thread>();
         threads.reserve(nThreads);
         for (int i = 0; i < nThreads; i++) {
             threads.emplace_back(jobQueueRenderer);
@@ -262,23 +262,23 @@ static void renderPixels(Color32* pixels) {
         RenderJob job;
         job.pixels = pixels;
         job.camera = &camera;
-        job.world  = world;
-        job.x      = 0;
-        job.y      = 0;
-        job.width  = WIDTH;
+        job.world = world;
+        job.x = 0;
+        job.y = 0;
+        job.width = WIDTH;
         job.height = HEIGHT;
 
         renderPartFromJob(job);
 #endif
 
-        auto                          loopEnd  = std::chrono::high_resolution_clock::now();
+        auto loopEnd = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> loopDiff = loopEnd - loopStart;
         std::cout << "Time of one render " << renderIndex << ": " << loopDiff.count() << " s\n";
     } // END for renderCount
 
-    auto                          end     = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> diff    = end - start;
-    auto                          average = diff.count() / renderCount;
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff = end - start;
+    auto average = diff.count() / renderCount;
     std::cout << "Average time of " << renderCount << " render(s): " << average << " s\n";
 }
 
@@ -287,7 +287,7 @@ static void savePixels(Color32* pixels) {
 }
 
 static std::atomic<bool> gAtomicRenderAndSaveDone;
-static void              renderAndSave(Color32* pixels) {
+static void renderAndSave(Color32* pixels) {
     gAtomicRenderAndSaveDone = false;
     renderPixels(pixels);
     savePixels(pixels);
@@ -380,8 +380,8 @@ int main(int argc, char** argv) {
         SDL_RenderClear(renderer);
 
         SDL_RendererFlip renderFlip = SDL_FLIP_NONE;
-        SDL_Rect         srcrect    = {0, 0, WIDTH, HEIGHT};
-        SDL_Rect         dstrect    = {0, 0, WIDTH * WINDOW_SCALE, HEIGHT * WINDOW_SCALE};
+        SDL_Rect srcrect = {0, 0, WIDTH, HEIGHT};
+        SDL_Rect dstrect = {0, 0, WIDTH * WINDOW_SCALE, HEIGHT * WINDOW_SCALE};
 
         SDL_RenderCopyEx(renderer, texture, &srcrect, &dstrect, 0, 0, renderFlip);
 
