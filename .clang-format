@@ -11,8 +11,6 @@ PointerAlignment: Left
 AlwaysBreakTemplateDeclarations: true
 AlignAfterOpenBracket: Align
 AlignEscapedNewlines: Left
-AlignConsecutiveAssignments: true
-AlignConsecutiveDeclarations: true
 AlignTrailingComments: true
 AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: false
