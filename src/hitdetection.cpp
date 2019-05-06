@@ -3,20 +3,18 @@ struct Ray {
     Vec3 d;
 
     Ray() = default;
-    Ray(Vec3 o, Vec3 d) : o(o), d(d) { }
+    Ray(Vec3 o, Vec3 d) : o(o), d(d) {}
 
-    Vec3 t(float t) const {
-        return o + t*d;
-    }
+    Vec3 t(float t) const { return o + t * d; }
 };
 
 struct Material;
 
 struct HitInfo {
-    f32 t;
-    Vec3 point;
-    Vec3 normal;
-    Material *material;
+    f32       t;
+    Vec3      point;
+    Vec3      normal;
+    Material* material;
 };
 
 struct Hittable {
@@ -24,79 +22,71 @@ struct Hittable {
 };
 
 struct Sphere {
-    Vec3 center;
-    f32 radius;
+    Vec3      center;
+    f32       radius;
     Material* material;
 
     Sphere() = default;
-    Sphere(Vec3 center, f32 radius, Material* material)
-        : center(center),
-          radius(radius),
-          material(material)
-    {
-    }
+    Sphere(Vec3 center, f32 radius, Material* material) : center(center), radius(radius), material(material) {}
 };
 
 struct SphereList : public Hittable {
     Sphere** list;
-    size_t listSize;
+    size_t   listSize;
 
     SphereList() = default;
-    SphereList(Sphere** _list, size_t size)
-    {
-        list = _list;
+    SphereList(Sphere** _list, size_t size) {
+        list     = _list;
         listSize = size;
     }
 
-    virtual bool
-    hit(const Ray& ray, f32 tMin, f32 tMax, HitInfo& info) const {
+    virtual bool hit(const Ray& ray, f32 tMin, f32 tMax, HitInfo& info) const {
         HitInfo tempInfo;
-        bool hitSomething = false;
-        f64 closestSoFar = tMax;
+        bool    hitSomething = false;
+        f64     closestSoFar = tMax;
         for (int i = 0; i < listSize; i++) {
             Sphere* sphere = list[i];
 
-            bool hit = false;
+            bool hit          = false;
             tempInfo.material = sphere->material;
 
             Vec3 oc = ray.o - sphere->center;
 
             Vec3 rayD = ray.d;
-            f32 a = //dot(rayD, rayD)
+            f32  a    = // dot(rayD, rayD)
                 ((rayD.x * rayD.x) + (rayD.y * rayD.y) + (rayD.z * rayD.z));
-            f32 b = //dot(oc, rayD)
+            f32 b = // dot(oc, rayD)
                 ((oc.x * rayD.x) + (oc.y * rayD.y) + (oc.z * rayD.z));
-            f32 c = //dot(oc, oc) - r^2
-                ((oc.x * oc.x) + (oc.y * oc.y) + (oc.z * oc.z))
-                    - sphere->radius*sphere->radius;
+            f32 c = // dot(oc, oc) - r^2
+                ((oc.x * oc.x) + (oc.y * oc.y) + (oc.z * oc.z)) - sphere->radius * sphere->radius;
 
-            f32 discriminant = b*b - a*c;
+            f32 discriminant = b * b - a * c;
             if (discriminant > 0) {
                 f32 discSqrt = sqrt(discriminant);
 
-                f32 temp = (-b - discSqrt)/a;
+                f32 temp = (-b - discSqrt) / a;
                 if (temp < closestSoFar && temp > tMin) {
-                    tempInfo.t = temp;
-                    tempInfo.point = ray.t(tempInfo.t);
+                    tempInfo.t      = temp;
+                    tempInfo.point  = ray.t(tempInfo.t);
                     tempInfo.normal = (tempInfo.point - sphere->center) / sphere->radius;
-                    hit = true;
+                    hit             = true;
                     goto end;
                 }
-                temp = (-b + discSqrt)/a;
+                temp = (-b + discSqrt) / a;
                 if (temp < closestSoFar && temp > tMin) {
-                    tempInfo.t = temp;
-                    tempInfo.point = ray.t(tempInfo.t);
+                    tempInfo.t      = temp;
+                    tempInfo.point  = ray.t(tempInfo.t);
                     tempInfo.normal = (tempInfo.point - sphere->center) / sphere->radius;
-                    hit = true;
+                    hit             = true;
                     goto end;
                 }
             }
 
-end:
+        end:
             if (hit) {
                 hitSomething = true;
                 closestSoFar = tempInfo.t;
-                info = tempInfo;
+                info         = tempInfo;
             }
         }
         return hitSomething;
