@@ -5,7 +5,9 @@ struct Ray {
     Ray() = default;
     Ray(Vec3 o, Vec3 d) : o(o), d(d) {}
 
-    Vec3 t(float t) const { return o + t * d; }
+    Vec3 t(float t) const {
+        return o + t * d;
+    }
 };
 
 struct Material;

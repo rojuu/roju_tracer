@@ -59,7 +59,9 @@ struct SafeQueue {
     std::queue<T> queue;
     std::mutex    mutex;
 
-    SafeQueue() { queue = std::queue<T>(); }
+    SafeQueue() {
+        queue = std::queue<T>();
+    }
 
     T front() {
         std::lock_guard<std::mutex> m(mutex);
@@ -71,14 +73,18 @@ struct SafeQueue {
         return queue.back();
     }
 
-    bool empty() { return queue.empty(); }
+    bool empty() {
+        return queue.empty();
+    }
 
     size_t size() {
         std::lock_guard<std::mutex> m(mutex);
         return queue.size();
     }
 
-    void unsafePush(T e) { queue.push(e); }
+    void unsafePush(T e) {
+        queue.push(e);
+    }
 
     void push(T e) {
         std::lock_guard<std::mutex> m(mutex);

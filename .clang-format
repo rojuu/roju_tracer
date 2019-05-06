@@ -1,11 +1,11 @@
 ﻿UseTab: Never
 IndentWidth: 4
+ColumnLimit: 120
 ---
 Language: Cpp
 SortIncludes: false
 AccessModifierOffset: -4
 AlignEscapedNewlinesLeft: true
-ColumnLimit: 120
 DerivePointerAlignment: false
 PointerAlignment: Left
 AlwaysBreakTemplateDeclarations: true
@@ -14,3 +14,8 @@ AlignEscapedNewlines: Left
 AlignConsecutiveAssignments: true
 AlignConsecutiveDeclarations: true
 AlignTrailingComments: true
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
