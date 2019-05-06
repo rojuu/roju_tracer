@@ -8,7 +8,9 @@ struct _Random {
         dist = std::uniform_real_distribution<f32>(0, 1);
     }
 
-    f32 next() { return dist(rng); }
+    f32 next() {
+        return dist(rng);
+    }
 };
 static _Random Random;
 
@@ -28,7 +30,9 @@ static Vec3 randomInUnitDisk() {
     return p;
 }
 
-static Vec3 reflect(const Vec3& v, const Vec3& n) { return v - 2 * HMM_Dot(v, n) * n; }
+static Vec3 reflect(const Vec3& v, const Vec3& n) {
+    return v - 2 * HMM_Dot(v, n) * n;
+}
 
 static bool refract(const Vec3& v, const Vec3& n, f32 niOverNt, Vec3& refracted) {
     Vec3 uv           = HMM_FastNormalize(v);

@@ -20,9 +20,13 @@ typedef i64 b64;
 typedef hmm_vec3 Vec3;
 typedef hmm_vec4 Vec4;
 
-static Vec3 vec3(f32 a, f32 b, f32 c) { return HMM_Vec3(a, b, c); }
+static Vec3 vec3(f32 a, f32 b, f32 c) {
+    return HMM_Vec3(a, b, c);
+}
 
-static Vec4 vec4(f32 a, f32 b, f32 c, f32 d) { return HMM_Vec4(a, b, c, d); }
+static Vec4 vec4(f32 a, f32 b, f32 c, f32 d) {
+    return HMM_Vec4(a, b, c, d);
+}
 
 struct Color32 {
     u32 value;
@@ -30,7 +34,9 @@ struct Color32 {
 
 typedef Vec3 Color;
 
-static Color makeColor(f32 r, f32 g, f32 b) { return vec3(r, g, b); }
+static Color makeColor(f32 r, f32 g, f32 b) {
+    return vec3(r, g, b);
+}
 
 static Color32 makeColor32(u8 r, u8 g, u8 b, u8 a = 255) {
     Color32 result;
