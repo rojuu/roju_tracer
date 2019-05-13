@@ -18,6 +18,7 @@
 #include "stb_image_write.cpp"
 #include "pcg_random.hpp"
 
+#include "containers.cpp"
 #include "config.cpp"
 #include "types.cpp"
 #include "math.cpp"
@@ -31,95 +32,49 @@ struct Camera {
     Vec3 origin;
     Vec3 u, v, w;
     f32 lensRadius;
-
-    Camera(Vec3 lookFrom, Vec3 lookAt, Vec3 vup, f32 vfov, f32 aspect, f32 aperture, f32 focusDist) {
-        lensRadius = aperture / 2;
-        f32 theta = vfov * M_PI / 180;
-        f32 halfHeight = tan(theta / 2);
-        f32 halfWidth = aspect * halfHeight;
-        origin = lookFrom;
-        w = HMM_FastNormalize(lookFrom - lookAt);
-        u = HMM_FastNormalize(HMM_Cross(vup, w));
-        v = HMM_Cross(w, u);
-        lowerLeftCorner = origin - halfWidth * focusDist * u - halfHeight * focusDist * v - focusDist * w;
-        horizontal = 2 * halfWidth * focusDist * u;
-        vertical = 2 * halfHeight * focusDist * v;
-    }
-
-    Ray getRay(f32 s, f32 t) {
-        Vec3 rd = lensRadius * randomInUnitDisk();
-        Vec3 offset = u * rd.x + v * rd.y;
-        Ray ray = Ray(origin + offset, lowerLeftCorner + s * horizontal + t * vertical - origin - offset);
-        return ray;
-    }
 };
 
-template <typename T>
-struct SafeQueue {
-    std::queue<T> queue;
-    std::mutex mutex;
+static Camera
+makeCamera(Vec3 lookFrom, Vec3 lookAt, Vec3 vup, f32 vfov, f32 aspect, f32 aperture, f32 focusDist) {
+    Camera result;
 
-    SafeQueue() {
-        queue = std::queue<T>();
-    }
+    result.lensRadius = aperture / 2;
+    f32 theta = vfov * M_PI / 180;
+    f32 halfHeight = tan(theta / 2);
+    f32 halfWidth = aspect * halfHeight;
+    result.origin = lookFrom;
+    result.w = HMM_FastNormalize(lookFrom - lookAt);
+    result.u = HMM_FastNormalize(HMM_Cross(vup, result.w));
+    result.v = HMM_Cross(result.w, result.u);
+    result.lowerLeftCorner =
+        result.origin - halfWidth * focusDist * result.u - halfHeight * focusDist * result.v - focusDist * result.w;
+    result.horizontal = 2 * halfWidth * focusDist * result.u;
+    result.vertical = 2 * halfHeight * focusDist * result.v;
 
-    T front() {
-        std::lock_guard<std::mutex> m(mutex);
-        return queue.front();
-    }
+    return result;
+}
 
-    T back() {
-        std::lock_guard<std::mutex> m(mutex);
-        return queue.back();
-    }
-
-    bool empty() {
-        return queue.empty();
-    }
-
-    size_t size() {
-        std::lock_guard<std::mutex> m(mutex);
-        return queue.size();
-    }
-
-    void unsafePush(T e) {
-        queue.push(e);
-    }
-
-    void push(T e) {
-        std::lock_guard<std::mutex> m(mutex);
-        queue.push(e);
-    }
-
-    void clear() {
-        std::lock_guard<std::mutex> m(mutex);
-        queue = std::queue<T>();
-    }
-
-    bool pop(T* out = nullptr) {
-        std::lock_guard<std::mutex> m(mutex);
-        if (queue.empty()) {
-            return false;
-        }
-        if (out != nullptr) {
-            *out = queue.front();
-        }
-        queue.pop();
-        return true;
-    }
-};
+static Ray
+getScreenRay(const Camera& camera, f32 s, f32 t) {
+    Vec3 rd = camera.lensRadius * randomInUnitDisk();
+    Vec3 offset = camera.u * rd.x + camera.v * rd.y;
+    Ray ray = Ray(camera.origin + offset,
+                  camera.lowerLeftCorner + s * camera.horizontal + t * camera.vertical - camera.origin - offset);
+    return ray;
+}
 
 struct RenderJob {
     Color32* pixels;
     Camera* camera;
-    Hittable* world;
+    World* world;
     i32 x, y;
     i32 width, height;
 };
 
-static Color calcColor(Ray& ray, Hittable* world, i32 depth) {
+static Color
+calcColor(const Ray& ray, const World& world, const i32 depth) {
     HitInfo info;
-    if (world->hit(ray, 0.001, MAXFLOAT, info)) {
+    if (hit(world, ray, 0.001, MAXFLOAT, info)) {
         Ray scattered;
         Vec3 attenuation;
         if (depth < TRACING_MAX_DEPTH && info.material->scatter(ray, info, attenuation, scattered)) {
@@ -134,45 +89,46 @@ static Color calcColor(Ray& ray, Hittable* world, i32 depth) {
     }
 }
 
-static Hittable* randomScene() {
-    int n = 500;
-    Sphere** list = new Sphere*[n + 1];
-    list[0] = new Sphere(vec3(0, -1000, 0), 1000, new Lambertian(vec3(0.5, 0.5, 0.5)));
-    int i = 1;
+static World
+randomScene() {
+    World world;
+
+    size_t n = 500;
+    Sphere* list = new Sphere[n];
+    list[0] = {vec3(0, -1000, 0), 1000, new Lambertian(vec3(0.5, 0.5, 0.5))};
+    size_t i = 1;
     for (int a = -11; a < 11; a++) {
         for (int b = -11; b < 11; b++) {
             float chooseMat = Random.next();
             Vec3 center = vec3(a + 0.9 * Random.next(), 0.2, b + 0.9 * Random.next());
             if (HMM_Length(center - vec3(4, 0.2, 0)) > 0.9) {
                 if (chooseMat < 0.8) { // diffuse
-                    list[i++] =
-                        new Sphere(center, 0.2,
-                                   new Lambertian(vec3(Random.next() * Random.next(), Random.next() * Random.next(),
-                                                       Random.next() * Random.next())));
+                    list[i++] = {center, 0.2,
+                                 new Lambertian(vec3(Random.next() * Random.next(), Random.next() * Random.next(),
+                                                     Random.next() * Random.next()))};
                 } else if (chooseMat < 0.95) { // metal
-                    list[i++] = new Sphere(
+                    list[i++] = {
                         center, 0.2,
                         new Metal(vec3(0.5 * (1 + Random.next()), 0.5 * (1 + Random.next()), 0.5 * (1 + Random.next())),
-                                  0.5 * Random.next()));
+                                  0.5 * Random.next())};
                 } else { // glass
-                    list[i++] = new Sphere(center, 0.2, new Dielectric(1.5));
+                    list[i++] = {center, 0.2, new Dielectric(1.5)};
                 }
             }
         }
     }
 end:
-    list[i++] = new Sphere(vec3(0, 1, 0), 1.0, new Dielectric(1.5));
-    list[i++] = new Sphere(vec3(-4, 1, 0), 1.0, new Lambertian(vec3(0.4, 0.2, 0.1)));
-    list[i++] = new Sphere(vec3(4, 1, 0), 1.0, new Metal(vec3(0.7, 0.6, 0.5), 0.0));
+    list[i++] = {vec3(0, 1, 0), 1.0, new Dielectric(1.5)};
+    list[i++] = {vec3(-4, 1, 0), 1.0, new Lambertian(vec3(0.4, 0.2, 0.1))};
+    list[i++] = {vec3(4, 1, 0), 1.0, new Metal(vec3(0.7, 0.6, 0.5), 0.0)};
 
-    /*Hittable** sl = new Hittable* [1] {
-        new SphereList(list, i),
-    };
-    return new HittableList(sl, 1);*/
-    return new SphereList(list, i);
+    world.sphereList = {list, i};
+
+    return world;
 }
 
-static void renderPartFromJob(const RenderJob& job) {
+static void
+renderPartFromJob(const RenderJob& job) {
     auto h = job.y + job.height;
     auto w = job.x + job.width;
     for (i32 y = job.y; y < h; y++) {
@@ -182,8 +138,8 @@ static void renderPartFromJob(const RenderJob& job) {
                 f32 u = ((f32)x + Random.next()) / (f32)WIDTH;
                 f32 v = 1.0 - ((f32)y + Random.next()) / (f32)HEIGHT; // Flipping the V so we go from bottom to top
 
-                Ray r = job.camera->getRay(u, v);
-                color += calcColor(r, job.world, 0);
+                Ray r = getScreenRay(*job.camera, u, v);
+                color += calcColor(r, *job.world, 0);
             }
             color /= (f32)SUBSTEPS;
             color = vec3(sqrt(color.r), sqrt(color.g), sqrt(color.b));
@@ -194,7 +150,8 @@ static void renderPartFromJob(const RenderJob& job) {
 
 static SafeQueue<RenderJob> gRenderQueue;
 
-static void jobQueueRenderer() {
+static void
+jobQueueRenderer() {
     while (!gRenderQueue.empty()) {
         RenderJob job;
         if (gRenderQueue.pop(&job)) {
@@ -203,14 +160,16 @@ static void jobQueueRenderer() {
     }
 }
 
-static void renderPixels(Color32* pixels) {
+static void
+renderPixels(Color32* pixels) {
     Vec3 lookFrom = vec3(13, 2, 3);
     Vec3 lookAt = vec3(0, 0, 0);
     f32 distToFocus = 10;
     f32 aperture = 0.1;
-    Camera camera(lookFrom, lookAt, vec3(0, 1, 0), 20, float(WIDTH) / float(HEIGHT), aperture, distToFocus);
+    Camera camera =
+        makeCamera(lookFrom, lookAt, vec3(0, 1, 0), 20, float(WIDTH) / float(HEIGHT), aperture, distToFocus);
 
-    Hittable* world = randomScene();
+    World world = randomScene();
 
     const int renderCount = 1;
     auto start = std::chrono::high_resolution_clock::now();
@@ -233,15 +192,10 @@ static void renderPixels(Color32* pixels) {
             while (x < WIDTH) {
                 int w = TILE_WIDTH;
                 w = w + x >= WIDTH ? WIDTH - x : w;
-                gRenderQueue.unsafePush({
-                    pixels,
-                    &camera,
-                    world,
-                    x,
-                    y,
-                    w,
-                    h,
-                });
+                RenderJob job = {
+                    pixels, &camera, &world, x, y, w, h,
+                };
+                gRenderQueue.unsafePush(job);
                 x += TILE_WIDTH;
             }
             x = 0;
@@ -282,19 +236,22 @@ static void renderPixels(Color32* pixels) {
     std::cout << "Average time of " << renderCount << " render(s): " << average << " s\n";
 }
 
-static void savePixels(Color32* pixels) {
+static void
+savePixels(Color32* pixels) {
     stbi_write_png("render.png", WIDTH, HEIGHT, 4, pixels, WIDTH * sizeof(Color32));
 }
 
 static std::atomic<bool> gAtomicRenderAndSaveDone;
-static void renderAndSave(Color32* pixels) {
+static void
+renderAndSave(Color32* pixels) {
     gAtomicRenderAndSaveDone = false;
     renderPixels(pixels);
     savePixels(pixels);
     gAtomicRenderAndSaveDone = true;
 }
 
-int main(int argc, char** argv) {
+int
+main(int argc, char** argv) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         const char* error = SDL_GetError();
         assert("SDL_Error" == error);
