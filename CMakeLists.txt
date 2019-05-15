@@ -6,10 +6,6 @@ add_subdirectory(deps/SDL2-2.0.9)
 
 find_package(Threads REQUIRED)
 
-if(${CMAKE_BUILD_TYPE} NOT DEFINED)
-    set(CMAKE_BUILD_TYPE Release)
-endif()
-
 if(MSVC)
 else()
     set(COMMON_FLAGS -msse3)
