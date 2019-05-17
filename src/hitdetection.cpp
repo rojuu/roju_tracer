@@ -1,23 +1,21 @@
 struct Ray {
     Vec3 o;
     Vec3 d;
-
-    Ray() = default;
-    Ray(Vec3 o, Vec3 d) : o(o), d(d) {}
-
-    Vec3 t(float t) const {
-        return o + t * d;
-    }
 };
+
+static Vec3
+pointOnRay(const Ray& ray, float t) {
+    return ray.o + t * ray.d;
+}
 
 static bool
 hit(const World& world, const Ray& ray, f32 tMin, f32 tMax, HitInfo& info) {
     HitInfo tempInfo;
     bool hitSomething = false;
     f64 closestSoFar = tMax;
-    List<Sphere> sphereList = world.sphereList;
-    for (int i = 0; i < sphereList.count; i++) {
-        Sphere* sphere = sphereList.members + i;
+    Array<Sphere> spheres = world.spheres;
+    for (int i = 0; i < spheres.count; i++) {
+        Sphere* sphere = spheres.members + i;
 
         bool hit = false;
         tempInfo.material = sphere->material;
@@ -39,7 +37,7 @@ hit(const World& world, const Ray& ray, f32 tMin, f32 tMax, HitInfo& info) {
             f32 temp = (-b - discSqrt) / a;
             if (temp < closestSoFar && temp > tMin) {
                 tempInfo.t = temp;
-                tempInfo.point = ray.t(tempInfo.t);
+                tempInfo.point = pointOnRay(ray, tempInfo.t);
                 tempInfo.normal = (tempInfo.point - sphere->center) / sphere->radius;
                 hit = true;
                 goto end;
@@ -47,7 +45,7 @@ hit(const World& world, const Ray& ray, f32 tMin, f32 tMax, HitInfo& info) {
             temp = (-b + discSqrt) / a;
             if (temp < closestSoFar && temp > tMin) {
                 tempInfo.t = temp;
-                tempInfo.point = ray.t(tempInfo.t);
+                tempInfo.point = pointOnRay(ray, tempInfo.t);
                 tempInfo.normal = (tempInfo.point - sphere->center) / sphere->radius;
                 hit = true;
                 goto end;

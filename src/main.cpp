@@ -58,8 +58,8 @@ static Ray
 getScreenRay(const Camera& camera, f32 s, f32 t) {
     Vec3 rd = camera.lensRadius * randomInUnitDisk();
     Vec3 offset = camera.u * rd.x + camera.v * rd.y;
-    Ray ray = Ray(camera.origin + offset,
-                  camera.lowerLeftCorner + s * camera.horizontal + t * camera.vertical - camera.origin - offset);
+    Ray ray = {camera.origin + offset,
+               camera.lowerLeftCorner + s * camera.horizontal + t * camera.vertical - camera.origin - offset};
     return ray;
 }
 
@@ -122,7 +122,7 @@ end:
     list[i++] = {vec3(-4, 1, 0), 1.0, new Lambertian(vec3(0.4, 0.2, 0.1))};
     list[i++] = {vec3(4, 1, 0), 1.0, new Metal(vec3(0.7, 0.6, 0.5), 0.0)};
 
-    world.sphereList = {list, i};
+    world.spheres = {list, i};
 
     return world;
 }

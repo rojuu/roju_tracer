@@ -14,7 +14,8 @@ struct _Random {
 };
 static _Random Random;
 
-static Vec3 randomInUnitSphere() {
+static Vec3
+randomInUnitSphere() {
     Vec3 p;
     do {
         p = 2.0 * vec3(Random.next(), Random.next(), Random.next()) - vec3(1, 1, 1);
@@ -22,7 +23,8 @@ static Vec3 randomInUnitSphere() {
     return p;
 }
 
-static Vec3 randomInUnitDisk() {
+static Vec3
+randomInUnitDisk() {
     Vec3 p;
     do {
         p = 2.0 * vec3(Random.next(), Random.next(), 0) - vec3(1, 1, 0);
@@ -30,11 +32,13 @@ static Vec3 randomInUnitDisk() {
     return p;
 }
 
-static Vec3 reflect(const Vec3& v, const Vec3& n) {
+static Vec3
+reflect(const Vec3& v, const Vec3& n) {
     return v - 2 * HMM_Dot(v, n) * n;
 }
 
-static bool refract(const Vec3& v, const Vec3& n, f32 niOverNt, Vec3& refracted) {
+static bool
+refract(const Vec3& v, const Vec3& n, f32 niOverNt, Vec3& refracted) {
     Vec3 uv = HMM_FastNormalize(v);
     f32 dt = HMM_Dot(uv, n);
     f32 discriminant = 1.0 - niOverNt * niOverNt * (1 - dt * dt);
@@ -46,7 +50,8 @@ static bool refract(const Vec3& v, const Vec3& n, f32 niOverNt, Vec3& refracted)
     }
 }
 
-static f32 schlick(f32 cosine, f32 refIdx) {
+static f32
+schlick(f32 cosine, f32 refIdx) {
     f32 r0 = (1 - refIdx) / (1 + refIdx);
     r0 = r0 * r0;
     return r0 * (1 - r0) * pow((1 - cosine), 5);
