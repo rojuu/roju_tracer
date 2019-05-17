@@ -9,7 +9,7 @@ struct Lambertian : public Material {
 
     virtual bool scatter(const Ray& rIn, const HitInfo& info, Vec3& attenuation, Ray& scattered) const {
         Vec3 target = info.point + info.normal + randomInUnitSphere();
-        scattered = Ray(info.point, target - info.point);
+        scattered = {info.point, target - info.point};
         attenuation = albedo;
         return true;
     }
@@ -28,7 +28,7 @@ struct Metal : public Material {
 
     virtual bool scatter(const Ray& rIn, const HitInfo& info, Vec3& attenuation, Ray& scattered) const {
         Vec3 reflected = reflect(HMM_FastNormalize(rIn.d), info.normal);
-        scattered = Ray(info.point, reflected + fuzz * randomInUnitSphere());
+        scattered = {info.point, reflected + fuzz * randomInUnitSphere()};
         attenuation = albedo;
         return (HMM_Dot(scattered.d, info.normal) > 0);
     }
@@ -62,9 +62,9 @@ struct Dielectric : public Material {
             reflectProb = 1.0;
         }
         if (Random.next() < reflectProb) {
-            scattered = Ray(info.point, reflected);
+            scattered = {info.point, reflected};
         } else {
-            scattered = Ray(info.point, refracted);
+            scattered = {info.point, refracted};
         }
         return true;
     }

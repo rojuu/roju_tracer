@@ -34,7 +34,7 @@ struct Sphere {
     Material* material;
 };
 struct World {
-    List<Sphere> sphereList;
+    Array<Sphere> spheres;
 };
 
 struct HitInfo {

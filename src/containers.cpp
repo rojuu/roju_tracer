@@ -1,5 +1,5 @@
 template <typename T>
-struct List {
+struct Array {
     T* members;
     size_t count;
 };
