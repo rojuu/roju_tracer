@@ -23,12 +23,10 @@ hit(const World& world, const Ray& ray, f32 tMin, f32 tMax, HitInfo& info) {
         Vec3 oc = ray.o - sphere->center;
 
         Vec3 rayD = ray.d;
-        f32 a = // dot(rayD, rayD)
-            ((rayD.x * rayD.x) + (rayD.y * rayD.y) + (rayD.z * rayD.z));
-        f32 b = // dot(oc, rayD)
-            ((oc.x * rayD.x) + (oc.y * rayD.y) + (oc.z * rayD.z));
-        f32 c = // dot(oc, oc) - r^2
-            ((oc.x * oc.x) + (oc.y * oc.y) + (oc.z * oc.z)) - sphere->radius * sphere->radius;
+
+        f32 a = HMM_Dot(rayD, rayD);
+        f32 b = HMM_Dot(oc, rayD);
+        f32 c = HMM_Dot(oc, oc) - sphere->radius * sphere->radius;
 
         f32 discriminant = b * b - a * c;
         if (discriminant > 0) {
