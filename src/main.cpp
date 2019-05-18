@@ -216,7 +216,7 @@ renderPixels(Color32* pixels) {
         RenderJob job;
         job.pixels = pixels;
         job.camera = &camera;
-        job.world = world;
+        job.world = &world;
         job.x = 0;
         job.y = 0;
         job.width = WIDTH;
