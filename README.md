@@ -5,7 +5,7 @@ A ray tracing thing with the help of [Ray Tracing in a Weekend](http://www.realt
 ## Render result
 ![alt text](render.png "Render png")
 
-Render takes approximately 0.9s on Manjaro Linux with a 12 core Intel i7-3930K @ 3.800GHz with a Release build. See [`config.cpp`](src/config.cpp) for details on resolution and bounce counts etc.
+This render takes approximately 0.9s to complete on Manjaro Linux with a 12 core Intel i7-3930K @ 3.800GHz with a Release build. See [`config.cpp`](src/config.cpp) for details on resolution and bounce counts etc.
 
 
 ## Compiling
