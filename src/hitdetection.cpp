@@ -29,6 +29,36 @@ hit(const World& world, const Ray& ray, f32 tMin, f32 tMax, HitInfo& info) {
         f32 c = HMM_Dot(oc, oc) - sphere->radius * sphere->radius;
 
         f32 discriminant = b * b - a * c;
+        f32 discSqrt = sqrt(discriminant);
+        f32 temp;
+
+        temp = (-b - discSqrt) / a;
+        bool mask1 = (temp < closestSoFar && temp > tMin);
+        HitInfo tempInfo1 = tempInfo;
+        tempInfo1.t = temp;
+        tempInfo1.point = pointOnRay(ray, temp);
+        tempInfo1.normal = (tempInfo1.point - sphere->center) / sphere->radius;
+
+        temp = (-b + discSqrt) / a;
+        bool mask2 = (temp < closestSoFar && temp > tMin);
+        HitInfo tempInfo2 = tempInfo;
+        tempInfo2.t = temp;
+        tempInfo2.point = pointOnRay(ray, temp);
+        tempInfo2.normal = (tempInfo2.point - sphere->center) / sphere->radius;
+
+#if 1
+        tempInfo = (discriminant > 0)
+            ? (mask1
+                ? tempInfo1
+                : (mask2
+                    ? tempInfo2
+                    : tempInfo))
+            : tempInfo;
+#endif
+
+        hit = mask1 || mask2;
+#if 0
+        f32 discriminant = b * b - a * c;
         if (discriminant > 0) {
             f32 discSqrt = sqrt(discriminant);
 
@@ -49,13 +79,11 @@ hit(const World& world, const Ray& ray, f32 tMin, f32 tMax, HitInfo& info) {
                 goto end;
             }
         }
-
-    end:
-        if (hit) {
-            hitSomething = true;
-            closestSoFar = tempInfo.t;
-            info = tempInfo;
-        }
+#endif
+        hitSomething = hit || hitSomething;
+        closestSoFar = hit ? tempInfo.t : closestSoFar;
+        info = hit ? tempInfo : info;
     }
+
     return hitSomething;
 }
