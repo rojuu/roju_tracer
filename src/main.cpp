@@ -67,12 +67,12 @@ struct RenderJob {
     Color32* pixels;
     Camera* camera;
     World* world;
-    i32 x, y;
-    i32 width, height;
+    s32 x, y;
+    s32 width, height;
 };
 
 static Color
-calcColor(const Ray& ray, const World& world, const i32 depth) {
+calcColor(const Ray& ray, const World& world, const s32 depth) {
     HitInfo info;
     if (hit(world, ray, 0.001, MAXFLOAT, info)) {
         Ray scattered;
@@ -131,10 +131,10 @@ static void
 renderPartFromJob(const RenderJob& job) {
     auto h = job.y + job.height;
     auto w = job.x + job.width;
-    for (i32 y = job.y; y < h; y++) {
-        for (i32 x = job.x; x < w; x++) {
+    for (s32 y = job.y; y < h; y++) {
+        for (s32 x = job.x; x < w; x++) {
             Vec3 color = vec3(0, 0, 0);
-            for (i32 s = 0; s < SUBSTEPS; s++) {
+            for (s32 s = 0; s < SUBSTEPS; s++) {
                 f32 u = ((f32)x + Random.next()) / (f32)WIDTH;
                 f32 v = 1.0 - ((f32)y + Random.next()) / (f32)HEIGHT; // Flipping the V so we go from bottom to top
 
