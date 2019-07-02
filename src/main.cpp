@@ -12,7 +12,7 @@
 #include <iostream>
 #include <chrono>
 
-#include <SDL2/SDL.h>
+#include "SDL.h"
 
 #include "HandmadeMath.cpp"
 #include "stb_image_write.cpp"
