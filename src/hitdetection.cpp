@@ -52,7 +52,7 @@ hit(const World& world, const Ray& ray, f32 tMin, f32 tMax, HitInfo& info) {
         // Pick the correct result, or none
         //   if discriminant > 0:
         //     Pick tempInfo1 if that is valid, otherwise tempInfo2,
-        //     otherwise the one we already had 
+        //     otherwise the one we already had
         //   else
         //     pick the one we already had
         HitInfo temp1 = mask2 ? tempInfo2 : tempInfo;
