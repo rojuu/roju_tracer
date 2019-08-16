@@ -11,6 +11,7 @@ if (CMAKE_BUILD_TYPE EQUAL "Release")
     set(CMAKE_CXX_FLAGS_RELEASE -Ofast msse3)
 endif()
 
+include_directories(src)
 add_executable(${PROJECT_NAME} src/main.cpp)
 
 target_link_libraries(${PROJECT_NAME} SDL2)
