@@ -1,5 +1,5 @@
 # roju_tracer
-A ray tracing thing with the help of [Ray Tracing in a Weekend](http://www.realtimerendering.com/raytracing/Ray%20Tracing%20in%20a%20Weekend.pdf). My goal when making this project was to learn about threading in a more hands on way, as I hadn't used it too much. So basically trying to optimize the program from the book with threading. A further improvement would be to use SIMD to improve performance even more
+A ray tracing thing with the help of [Ray Tracing in a Weekend](http://www.realtimerendering.com/raytracing/Ray%20Tracing%20in%20a%20Weekend.pdf). My goal when making this project was to learn about threading in a more hands on way, as I hadn't used it too much. So basically trying to optimize the program from the book with threading. A further improvement would be to use SIMD to improve performance even more, or maybe add some bounding volume hierarchies.
 
 
 ## Render result
