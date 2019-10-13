@@ -4,7 +4,6 @@
 #include <random>
 #include <cstring>
 #include <cassert>
-#include <thread>
 #include <mutex>
 #include <queue>
 #include <algorithm>
@@ -74,7 +73,7 @@ struct RenderJob {
 static Color
 calcColor(const Ray& ray, const World& world, const i32 depth) {
     HitInfo info;
-    if (hit(world, ray, 0.001, MAXFLOAT, info)) {
+    if (hit(world, ray, 0.001, std::numeric_limits<float>::max(), info)) {
         Ray scattered;
         Vec3 attenuation;
         if (depth < TRACING_MAX_DEPTH && info.material->scatter(ray, info, attenuation, scattered)) {
@@ -150,14 +149,15 @@ renderPartFromJob(const RenderJob& job) {
 
 static SafeQueue<RenderJob> gRenderQueue;
 
-static void
-jobQueueRenderer() {
+static int
+jobQueueRenderer(void *) {
     while (!gRenderQueue.empty()) {
         RenderJob job;
         if (gRenderQueue.pop(&job)) {
             renderPartFromJob(job);
         }
     }
+    return EXIT_SUCCESS;
 }
 
 static void
@@ -202,15 +202,17 @@ renderPixels(Color32* pixels) {
             y += TILE_HEIGHT;
         }
 
-        auto nThreads = std::thread::hardware_concurrency();
-        auto threads = std::vector<std::thread>();
+        auto nThreads = SDL_GetCPUCount();
+        auto threads = std::vector<SDL_Thread *>();
         threads.reserve(nThreads);
         for (int i = 0; i < nThreads; i++) {
-            threads.emplace_back(jobQueueRenderer);
+            SDL_Thread *thread = SDL_CreateThread(jobQueueRenderer, "jobqueue", 0);
+            threads.emplace_back(thread);
         }
 
         for (int i = 0; i < threads.size(); i++) {
-            threads[i].join();
+            int status;
+            SDL_WaitThread(threads[i], &status);
         }
 #else
         RenderJob job;
@@ -250,6 +252,12 @@ renderAndSave(Color32* pixels) {
     gAtomicRenderAndSaveDone = true;
 }
 
+static int
+renderAndSaveThread(void *pixels) {
+    renderAndSave(static_cast<Color32 *>(pixels));
+    return EXIT_SUCCESS;
+}
+
 int
 main(int argc, char** argv) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -282,9 +290,9 @@ main(int argc, char** argv) {
 #define START_WITH_SPACE 0
 
 #if START_WITH_SPACE
-    std::thread backgroundThread;
+    SDL_Thread *backgroundThread;
 #else
-    std::thread backgroundThread = std::thread(renderAndSave, pixels);
+    SDL_Thread *backgroundThread = SDL_CreateThread(renderAndSaveThread, "backgroudnThread", pixels);
 #endif
 
     bool expectedRenderAndSaveState = !gAtomicRenderAndSaveDone;
@@ -313,7 +321,7 @@ main(int argc, char** argv) {
             case SDL_KEYUP: {
                 switch (event.key.keysym.sym) {
                 case SDLK_SPACE: {
-                    backgroundThread = std::thread(renderAndSave, pixels);
+                    backgroundThread = SDL_CreateThread(renderAndSaveThread, "backgroudnThread", pixels);
                     break;
                 }
                 }
