@@ -8,10 +8,10 @@ template <typename T>
 class SafeQueue {
 private:
     std::queue<T> m_Queue;
-    SDL_mutex *m_Mutex;
+    std::mutex m_Mutex;
 
 public:
-    SafeQueue() : m_Queue(), m_Mutex(SDL_CreateMutex()) {}
+    SafeQueue() : m_Queue(), m_Mutex() {}
 
     T front();
     T back();
@@ -26,37 +26,28 @@ public:
 template <typename T>
 T
 SafeQueue<T>::front() {
-    SDL_LockMutex(m_Mutex);
-    auto result = m_Queue.front();
-    SDL_UnlockMutex(m_Mutex);
-    return result;
+    std::lock_guard<std::mutex> lockGuard(m_Mutex);
+    return m_Queue.front();
 }
 
 template <typename T>
 T
 SafeQueue<T>::back() {
-    SDL_LockMutex(m_Mutex);
-    auto result = m_Queue.back();
-    SDL_UnlockMutex(m_Mutex);
-    return result;
+    std::lock_guard<std::mutex> lockGuard(m_Mutex);
+    return m_Queue.back();
 }
 
 template <typename T>
 bool
 SafeQueue<T>::empty() {
-    SDL_LockMutex(m_Mutex);
-    auto result = m_Queue.empty();
-    SDL_UnlockMutex(m_Mutex);
-    return result;
+    return m_Queue.empty();
 }
 
 template <typename T>
 size_t
 SafeQueue<T>::size() {
-    SDL_LockMutex(m_Mutex);
-    auto result = m_Queue.size();
-    SDL_UnlockMutex(m_Mutex);
-    return result;
+    std::lock_guard<std::mutex> lockGuard(m_Mutex);
+    return m_Queue.size();
 }
 
 template <typename T>
@@ -68,31 +59,27 @@ SafeQueue<T>::unsafePush(T e) {
 template <typename T>
 void
 SafeQueue<T>::push(T e) {
-    SDL_LockMutex(m_Mutex);
+    std::lock_guard<std::mutex> lockGuard(m_Mutex);
     m_Queue.push(e);
-    SDL_UnlockMutex(m_Mutex);
 }
 
 template <typename T>
 void
 SafeQueue<T>::clear() {
-    SDL_LockMutex(m_Mutex);
+    std::lock_guard<std::mutex> lockGuard(m_Mutex);
     m_Queue = std::queue<T>();
-    SDL_UnlockMutex(m_Mutex);
 }
 
 template <typename T>
 bool
 SafeQueue<T>::pop(T* out) {
-    SDL_LockMutex(m_Mutex);
+    std::lock_guard<std::mutex> lockGuard(m_Mutex);
     if (m_Queue.empty()) {
-        SDL_UnlockMutex(m_Mutex);
         return false;
     }
     if (out != nullptr) {
         *out = m_Queue.front();
     }
     m_Queue.pop();
-    SDL_UnlockMutex(m_Mutex);
     return true;
 }
