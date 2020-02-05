@@ -16,7 +16,7 @@ Preferred way to build is to use the provided [CMake](https://cmake.org/) files 
 mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
-make
+cmake --build .
 ```
 
 Currently this program is only tested on Linux, but should in theory work on Windows and OSX as well.
