@@ -345,6 +345,8 @@ main(int argc, char** argv) {
         SDL_RenderPresent(renderer);
     }
 
+    backgroundThread.join();
+
     SDL_DestroyWindow(window);
     SDL_Quit();
     return 0;
