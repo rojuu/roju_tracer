@@ -13,8 +13,8 @@ The project is structured in a "unity build" sort of way, so everything is just 
 
 Preferred way to build is to use the provided [CMake](https://cmake.org/) files for generating projects or makefiles for each platform. For faster runtime, make sure to use a Release build. For example compiling on Linux would look something like:
 ```
-mkdir bin-release
-cd bin-release
+mkdir build
+cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make
 ```
