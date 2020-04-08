@@ -41,7 +41,7 @@ static bool
 refract(const Vec3& v, const Vec3& n, f32 niOverNt, Vec3& refracted) {
     Vec3 uv = HMM_FastNormalize(v);
     f32 dt = HMM_Dot(uv, n);
-    f32 discriminant = 1.0 - niOverNt * niOverNt * (1 - dt * dt);
+    f32 discriminant = 1.0f - niOverNt * niOverNt * (1 - dt * dt);
     if (discriminant > 0) {
         refracted = niOverNt * (uv - n * dt) - n * sqrt(discriminant);
         return true;

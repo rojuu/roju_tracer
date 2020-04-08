@@ -53,7 +53,7 @@ struct Dielectric : public Material {
             cosine = refIdx * HMM_Dot(rIn.d, info.normal) / HMM_Length(rIn.d);
         } else {
             outwardNormal = info.normal;
-            niOverNt = 1.0 / refIdx;
+            niOverNt = 1.0f / refIdx;
             cosine = -HMM_Dot(rIn.d, info.normal) / HMM_Length(rIn.d);
         }
         if (refract(rIn.d, outwardNormal, niOverNt, refracted)) {

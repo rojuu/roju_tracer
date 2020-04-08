@@ -11,8 +11,10 @@
 #include <utility>
 #include <iostream>
 #include <chrono>
+#include <limits>
 
-#include "SDL.h"
+#define SDL_MAIN_HANDLED
+#include <SDL.h>
 
 #include "HandmadeMath.cpp"
 #include "stb_image_write.cpp"
@@ -39,7 +41,7 @@ makeCamera(Vec3 lookFrom, Vec3 lookAt, Vec3 vup, f32 vfov, f32 aspect, f32 apert
     Camera result;
 
     result.lensRadius = aperture / 2;
-    f32 theta = vfov * M_PI / 180;
+    f32 theta = vfov * (f32)M_PI / 180;
     f32 halfHeight = tan(theta / 2);
     f32 halfWidth = aspect * halfHeight;
     result.origin = lookFrom;
@@ -74,7 +76,7 @@ struct RenderJob {
 static Color
 calcColor(const Ray& ray, const World& world, const i32 depth) {
     HitInfo info;
-    if (hit(world, ray, 0.001, MAXFLOAT, info)) {
+    if (hit(world, ray, 0.001f, std::numeric_limits<f32>::max(), info)) {
         Ray scattered;
         Vec3 attenuation;
         if (depth < TRACING_MAX_DEPTH && info.material->scatter(ray, info, attenuation, scattered)) {
@@ -100,27 +102,29 @@ randomScene() {
     for (int a = -11; a < 11; a++) {
         for (int b = -11; b < 11; b++) {
             float chooseMat = Random.next();
-            Vec3 center = vec3(a + 0.9 * Random.next(), 0.2, b + 0.9 * Random.next());
-            if (HMM_Length(center - vec3(4, 0.2, 0)) > 0.9) {
+            Vec3 center = vec3(a + 0.9f * Random.next(), 0.2f, b + 0.9f * Random.next());
+            if (HMM_Length(center - vec3(4.f, 0.2f, 0.f)) > 0.9f) {
                 if (chooseMat < 0.8) { // diffuse
-                    list[i++] = {center, 0.2,
+                    list[i++] = {center, 0.2f,
                                  new Lambertian(vec3(Random.next() * Random.next(), Random.next() * Random.next(),
                                                      Random.next() * Random.next()))};
-                } else if (chooseMat < 0.95) { // metal
+                } else if (chooseMat < 0.95f) { // metal
                     list[i++] = {
-                        center, 0.2,
-                        new Metal(vec3(0.5 * (1 + Random.next()), 0.5 * (1 + Random.next()), 0.5 * (1 + Random.next())),
-                                  0.5 * Random.next())};
+                        center, 0.2f,
+                        new Metal(vec3(0.5f * (1.f + Random.next()),
+                                       0.5f * (1.f + Random.next()),
+                                       0.5f * (1.f + Random.next())),
+                                  0.5f * Random.next())};
                 } else { // glass
-                    list[i++] = {center, 0.2, new Dielectric(1.5)};
+                    list[i++] = {center, 0.2f, new Dielectric(1.5f)};
                 }
             }
         }
     }
-end:
-    list[i++] = {vec3(0, 1, 0), 1.0, new Dielectric(1.5)};
-    list[i++] = {vec3(-4, 1, 0), 1.0, new Lambertian(vec3(0.4, 0.2, 0.1))};
-    list[i++] = {vec3(4, 1, 0), 1.0, new Metal(vec3(0.7, 0.6, 0.5), 0.0)};
+
+    list[i++] = {vec3(0.f, 1.f, 0.f), 1.0f, new Dielectric(1.5f)};
+    list[i++] = {vec3(-4.f, 1.f, 0.f), 1.0f, new Lambertian(vec3(0.4f, 0.2f, 0.1f))};
+    list[i++] = {vec3(4.f, 1.f, 0.f), 1.0f, new Metal(vec3(0.7f, 0.6f, 0.5f), 0.0f)};
 
     world.spheres = {list, i};
 
@@ -136,7 +140,7 @@ renderPartFromJob(const RenderJob& job) {
             Vec3 color = vec3(0, 0, 0);
             for (i32 s = 0; s < SUBSTEPS; s++) {
                 f32 u = ((f32)x + Random.next()) / (f32)WIDTH;
-                f32 v = 1.0 - ((f32)y + Random.next()) / (f32)HEIGHT; // Flipping the V so we go from bottom to top
+                f32 v = 1.0f - ((f32)y + Random.next()) / (f32)HEIGHT; // Flipping the V so we go from bottom to top
 
                 Ray r = getScreenRay(*job.camera, u, v);
                 color += calcColor(r, *job.world, 0);
@@ -165,7 +169,7 @@ renderPixels(Color32* pixels) {
     Vec3 lookFrom = vec3(13, 2, 3);
     Vec3 lookAt = vec3(0, 0, 0);
     f32 distToFocus = 10;
-    f32 aperture = 0.1;
+    f32 aperture = 0.1f;
     Camera camera =
         makeCamera(lookFrom, lookAt, vec3(0, 1, 0), 20, float(WIDTH) / float(HEIGHT), aperture, distToFocus);
 
@@ -202,14 +206,14 @@ renderPixels(Color32* pixels) {
             y += TILE_HEIGHT;
         }
 
-        auto nThreads = std::thread::hardware_concurrency();
+        u32 nThreads = std::thread::hardware_concurrency();
         auto threads = std::vector<std::thread>();
         threads.reserve(nThreads);
-        for (int i = 0; i < nThreads; i++) {
+        for (size_t i = 0; i < nThreads; i++) {
             threads.emplace_back(jobQueueRenderer);
         }
 
-        for (int i = 0; i < threads.size(); i++) {
+        for (size_t i = 0; i < threads.size(); i++) {
             threads[i].join();
         }
 #else

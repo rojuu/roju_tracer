@@ -70,7 +70,7 @@ makeColor32(u8 r, u8 g, u8 b, u8 a = 255) {
 static Color32
 makeColor32(Color color) {
     Color32 result;
-    result = makeColor32(color.r * 255, color.g * 255, color.b * 255);
+    result = makeColor32(u8(color.r * 255), u8(color.g * 255), u8(color.b * 255));
     return result;
 }
 
