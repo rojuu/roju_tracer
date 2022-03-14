@@ -11,12 +11,12 @@ This render takes approximately 0.9s to complete on Manjaro Linux with a 6 core 
 ## Compiling
 The project is structured in a "unity build" sort of way, so everything is just included in `main.cpp`, except for SDL2, which needs to be linked against separately.
 
-Preferred way to build is to use the provided [CMake](https://cmake.org/) files for generating projects or makefiles for each platform. For faster runtime, make sure to use a Release build. For example compiling on Linux would look something like:
+Preferred way to build is to use the provided [CMake](https://cmake.org/) files for generating projects or makefiles for each platform. For faster runtime, make sure to use a Release build. For example compiling from command line on pretty much all platforms should look like this:
 ```
 mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build .
+cmake --build . --config Release
 ```
 
 Currently this program is only tested on Linux, but should in theory work on Windows and OSX as well.

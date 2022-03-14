@@ -14,7 +14,7 @@
 #include <limits>
 
 #define SDL_MAIN_HANDLED
-#include <SDL.h>
+#include "SDL.h"
 
 #include "HandmadeMath.cpp"
 #include "stb_image_write.cpp"
