@@ -30,4 +30,3 @@ Following are single-ish header libraries, so they don't require any specific ac
 - [HandmadeMath](https://github.com/HandmadeMath/Handmade-Math)
 - [stb_image_write](https://github.com/nothings/stb)
 - [PCG Random Number Generator C++ library](https://github.com/imneme/pcg-cpp)
-
